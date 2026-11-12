@@ -1,0 +1,721 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  width: 100%;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  background: #eef4fb;
+}
+
+/* ----------------- Layout & Structure ----------------- */
+.dashboard-layout {
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background: #eef4fb;
+}
+
+.dashboard-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+  background: #eef4fb;
+}
+
+.dashboard-content {
+  width: 100%;
+  margin-top: 46px;
+  padding: 20px 18px 28px;
+}
+
+/* ----------------- Header ----------------- */
+.dashboard-header {
+  height: 46px !important;
+  z-index: 1201 !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  box-shadow: none !important;
+}
+
+.dashboard-header-toolbar {
+  min-height: 46px !important;
+  height: 46px !important;
+  padding: 0 24px !important;
+}
+
+/* ----------------- Sidebar ----------------- */
+.dashboard-sidebar {
+  width: 180px !important;
+  flex-shrink: 0;
+}
+
+.dashboard-sidebar .MuiDrawer-paper {
+  width: 180px !important;
+  top: 46px !important;
+  height: calc(100vh - 46px) !important;
+  border-right: none !important;
+  background: #000000 !important;
+}
+
+.sidebar-list {
+  padding: 8px 10px !important;
+  margin: 0 !important;
+}
+
+.sidebar-dashboard-button {
+  min-height: 38px !important;
+  margin-bottom: 5px !important;
+  padding: 5px 10px !important;
+  border-radius: 6px !important;
+  background: #ef2020 !important;
+  color: #ffffff !important;
+}
+
+.sidebar-dashboard-button:hover,
+.sidebar-dashboard-button.Mui-selected,
+.sidebar-dashboard-button.Mui-selected:hover {
+  background: #ef2020 !important;
+}
+
+.sidebar-icon {
+  min-width: 32px !important;
+  color: #ffffff !important;
+}
+
+.sidebar-dashboard-button .MuiListItemIcon-root {
+  color: #ffffff !important;
+}
+
+.sidebar-text .MuiListItemText-primary {
+  color: #ffffff !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+}
+
+/* ----------------- Search & Filter Section ----------------- */
+.dashboard-search-summary {
+  display: grid;
+  grid-template-columns: 50% 1fr;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.dashboard-search-summary > * {
+  min-width: 0;
+}
+
+.dashboard-search-summary > *:last-child {
+  margin-bottom: 0 !important;
+}
+
+.shift-search-card {
+  width: 100%;
+  min-height: 0;
+  border: 1px solid #dbe4ef !important;
+  border-radius: 10px !important;
+  background: #000000 !important;
+  box-shadow: 0 3px 12px rgba(15, 23, 42, 0.05) !important;
+}
+
+.shift-search-card-content {
+  position: relative;
+  padding: 20px 20px 12px !important;
+  background: #cbd5e1 !important;
+}
+
+.shift-search-title {
+  color: #0f172a !important;
+  font-size: 0.98rem !important;
+  font-weight: 700 !important;
+}
+
+.shift-search-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 20px;
+  row-gap: 14px;
+  align-items: start;
+}
+
+.shift-search-fields > .custom-text-field {
+  grid-column: 1 / -1;
+}
+
+.shift-search-date-field {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.shift-search-date-label {
+  margin: 0 !important;
+  color: #334155 !important;
+  font-size: 0.82rem !important;
+  line-height: 1.25 !important;
+  font-weight: 500 !important;
+}
+
+.shift-search-date-field .MuiFormControl-root,
+.shift-search-date-field .MuiOutlinedInput-root {
+  width: 100%;
+  min-width: 0;
+}
+
+.shift-search-more-filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  column-gap: 20px;
+  align-items: start;
+  margin-top: 14px;
+}
+
+.shift-search-more-filters > .custom-multiselect-autocomplete {
+  width: 100%;
+  min-width: 0;
+}
+
+.shift-search-options {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 0;
+  min-width: 0;
+}
+
+.shift-search-more-filter-button {
+  margin: 0 !important;
+}
+
+.shift-search-more-filter-button .MuiButton-root {
+  min-width: 0 !important;
+  padding: 2px 6px !important;
+  color: #0f3d91 !important;
+  background: #e0ecff !important;
+  border: 1px solid #93c5fd !important;
+  border-radius: 5px !important;
+  text-transform: none !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+}
+
+.shift-search-actions {
+  display: flex;
+  justify-content: center !important;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px !important;
+}
+
+.shift-search-button {
+  min-height: 31px !important;
+  padding: 4px 14px !important;
+  border-radius: 6px !important;
+  text-transform: none !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  background: #1976e8 !important;
+}
+
+.shift-search-button:hover {
+  background: #0867d8 !important;
+}
+
+/* ----------------- Summary & KPI Cards ----------------- */
+.summary-card {
+  width: 100%;
+  min-height: 96px;
+  border-radius: 10px !important;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.summary-card:hover {
+  transform: translateY(-4px) !important;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14) !important;
+}
+
+.summary-card-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 64px;
+}
+
+.summary-card-title {
+  color: #ffffff !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  margin-bottom: 4px !important;
+}
+
+.summary-card-value {
+  color: #ffffff !important;
+  font-size: 1.65rem !important;
+  line-height: 1.1 !important;
+  font-weight: 700 !important;
+}
+
+.summary-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+}
+
+.summary-total {
+  background: #042352 !important;
+  border: 1px solid #042352 !important;
+}
+
+.summary-total .summary-card-icon {
+  background: #f2f5f8 !important;
+  color: #121411 !important;
+}
+
+.summary-active {
+  background: #0b8e14 !important;
+  border: 1px solid #0b8e14 !important;
+}
+
+.summary-active .summary-card-icon {
+  background: #eef5f1 !important;
+  color: #16a34a !important;
+}
+
+.summary-inactive {
+  background: #ea0b0b !important;
+  border: 1px solid #ea0b0b !important;
+}
+
+.summary-inactive .summary-card-icon {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.summary-night {
+  background: #3b0d64 !important;
+  border: 1px solid #7e22ce !important;
+}
+
+.summary-night .summary-card-icon {
+  background: #fef3c7 !important;
+  color: #d97706 !important;
+}
+
+/* ----------------- Shift DataGrid & Table Actions ----------------- */
+.shift-table-grid-wrapper {
+  width: 100%;
+  min-width: 1050px;
+}
+
+.shift-data-grid {
+  border: none !important;
+  background: #ffffff !important;
+}
+
+.shift-data-grid .MuiDataGrid-columnHeaders {
+  min-height: 42px !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid #dbe2ea !important;
+}
+
+.shift-data-grid .MuiDataGrid-columnHeader {
+  color: #475569 !important;
+  font-size: 0.68rem !important;
+  font-weight: 700 !important;
+}
+
+.shift-data-grid .MuiDataGrid-columnHeaderTitle {
+  font-weight: 700 !important;
+}
+
+.shift-data-grid .MuiDataGrid-cell {
+  color: #334155 !important;
+  font-size: 0.68rem !important;
+  border-bottom: 1px solid #dbe2ea !important;
+}
+
+.shift-data-grid .MuiDataGrid-row:nth-of-type(even) {
+  background: #eef3ff !important;
+}
+
+.shift-data-grid .MuiDataGrid-row:nth-of-type(odd) {
+  background: #ffffff !important;
+}
+
+.shift-data-grid .MuiDataGrid-row:hover {
+  background: #e2e8f0 !important;
+}
+
+.shift-data-grid .MuiDataGrid-footerContainer {
+  min-height: 40px !important;
+  background: #ffffff !important;
+  border-top: 1px solid #dbe2ea !important;
+}
+
+.shift-data-grid .MuiTablePagination-root {
+  color: #475569 !important;
+  font-size: 0.68rem !important;
+}
+
+.shift-data-grid .MuiChip-root {
+  height: 20px !important;
+  font-size: 0.62rem !important;
+  font-weight: 600 !important;
+}
+
+.shift-table-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.shift-edit-button {
+  padding: 3px !important;
+  color: #1976e8 !important;
+}
+
+.shift-delete-button {
+  padding: 3px !important;
+  color: #dc2626 !important;
+}
+
+/* ----------------- Custom Input Controls ----------------- */
+.custom-text-field .MuiOutlinedInput-root,
+.custom-text-area .MuiOutlinedInput-root,
+.custom-multiselect .MuiOutlinedInput-root,
+.custom-multiselect-autocomplete .MuiOutlinedInput-root {
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.custom-text-field .MuiOutlinedInput-input {
+  padding: 9px 11px;
+  font-size: 0.76rem;
+  color: #334155;
+}
+
+.custom-text-field .MuiInputLabel-root,
+.custom-text-area .MuiInputLabel-root,
+.custom-multiselect-autocomplete .MuiInputLabel-root {
+  font-size: 0.75rem;
+}
+
+.custom-text-field .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline,
+.custom-text-area .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline,
+.custom-multiselect-autocomplete .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #1976e8 !important;
+  border-width: 1px !important;
+}
+
+.custom-text-field .MuiInputLabel-root.Mui-focused,
+.custom-text-area .MuiInputLabel-root.Mui-focused,
+.custom-multiselect-autocomplete .MuiInputLabel-root.Mui-focused {
+  color: #1976e8 !important;
+}
+
+.custom-text-field .MuiFormHelperText-root,
+.custom-text-area .MuiFormHelperText-root,
+.custom-multiselect .MuiFormHelperText-root {
+  margin-left: 0;
+  font-size: 0.67rem;
+}
+
+.custom-text-field .MuiOutlinedInput-root.Mui-focused {
+  background: #e2e8f0 !important;
+}
+
+.custom-text-field .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: #64748b !important;
+}
+
+/* ----------------- Custom Attachment ----------------- */
+.custom-attachment-button {
+  min-height: 34px !important;
+  padding: 5px 14px !important;
+  border-radius: 7px !important;
+  background: #e0ecff !important;
+  border: 1px solid #93c5fd !important;
+  color: #2563eb !important;
+  text-transform: none !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+}
+
+.custom-attachment-text {
+  display: block !important;
+  margin-top: 5px !important;
+  color: #64748b !important;
+  font-size: 0.68rem !important;
+}
+
+/* ----------------- Shift Forms & Drawers ----------------- */
+.shift-form-card {
+  width: 100%;
+  padding: 24px;
+  border: 1px solid #dbe4ef !important;
+  border-radius: 10px !important;
+  background: #f1f5f9 !important;
+}
+
+.shift-form-drawer .MuiDrawer-paper {
+  width: 50vw !important;
+  max-width: 50vw !important;
+  top: 46px !important;
+  height: calc(100vh - 46px) !important;
+  box-sizing: border-box !important;
+  background: #f1f5f9 !important;
+}
+
+.shift-form-drawer-content {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.shift-form-drawer-content .shift-form-card {
+  width: 100%;
+  padding: 0;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.shift-form-drawer .MuiBackdrop-root {
+  background-color: rgba(0, 0, 0, 0.15) !important;
+  backdrop-filter: blur(2px);
+}
+
+.shift-form-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.shift-form-textareas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.shift-form-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 8px 10px;
+  border: 1px solid #d5e3f5;
+  border-radius: 9px;
+  background: #ffffff !important;
+}
+
+.shift-form-option {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.shift-form-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.shift-form-heading-text {
+  min-width: 0;
+}
+
+.shift-form-heading-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+}
+
+.shift-form-field-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 10px;
+}
+
+.shift-form-field-icon svg {
+  font-size: 23px;
+}
+
+.shift-icon-blue {
+  color: #1677f8;
+  background: #e0edff;
+}
+
+.shift-form-attachment {
+  margin-top: 14px;
+  padding: 10px;
+  border: 1px dashed #bfd4ef;
+  border-radius: 9px;
+  background: #f7faff;
+}
+
+.shift-form-attachment-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.shift-form-attachment-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.shift-form-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.shift-form-status-control {
+  width: 180px;
+  max-width: calc(100% - 50px);
+}
+
+.shift-form-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 12px 0 0;
+  border-top: 1px solid #f2f3f4;
+  background: #f1f5f9;
+}
+
+.dashboard-add-button {
+  position: fixed !important;
+  right: 24px !important;
+  bottom: 8px !important;
+  z-index: 1300 !important;
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #1976e8 !important;
+  color: #ffffff !important;
+  border-radius: 50% !important;
+}
+
+.dashboard-add-button:hover {
+  background: #0867d8 !important;
+}
+
+/* ----------------- Media Queries ----------------- */
+@media (max-width: 1100px) {
+  .dashboard-search-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .shift-form-drawer .MuiDrawer-paper {
+    width: 80vw !important;
+    max-width: 80vw !important;
+  }
+
+  .shift-search-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .shift-form-fields,
+  .shift-form-textareas {
+    grid-template-columns: 1fr;
+  }
+
+  .shift-form-field-icon {
+    width: 36px;
+    height: 36px;
+    flex-basis: 36px;
+  }
+
+  .shift-form-field-icon svg {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 600px) {
+  .shift-form-drawer .MuiDrawer-paper {
+    width: 100vw !important;
+    max-width: 100vw !important;
+  }
+
+  .dashboard-content {
+    padding: 18px 12px 70px;
+  }
+
+  .shift-search-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .shift-search-options {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .shift-form-actions {
+    justify-content: stretch;
+  }
+
+  .shift-form-header {
+    gap: 10px;
+  }
+
+  .shift-form-heading-icon {
+    width: 42px;
+    height: 42px;
+    flex-basis: 42px;
+  }
+
+  .shift-form-checkboxes {
+    gap: 8px;
+  }
+
+  .shift-form-option {
+    width: 100%;
+  }
+
+  .shift-form-attachment-row {
+    align-items: flex-start;
+  }
+
+  .shift-form-status-control {
+    width: 160px;
+  }
+}
