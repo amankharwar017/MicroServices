@@ -24,8 +24,8 @@ const defaultFilters = (): ShiftDashboardFilters => ({
     shiftTypes: [],
     status: [],
     nightShift: [],
-    createdDateFrom: "",
-    createdDateTo: ""
+    createdDateFrom: dayjs().subtract(7, "day").format("YYYY-MM-DD"),
+    createdDateTo: dayjs().format("YYYY-MM-DD")
 });
 
 export default function ShiftDashboard() {
@@ -35,6 +35,7 @@ export default function ShiftDashboard() {
     const [loading, setLoading] = useState(true);
     const [failed, setFailed] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [summaryCounts, setSummaryCounts] = useState<{ total: number; active: number; inactive: number; night: number; } | null>(null);
     const [dropdownOptions, setDropdownOptions] = useState<ShiftDropdownOptionsResponse | null>(null);
     const [filters, setFilters] = useState<ShiftDashboardFilters>(defaultFilters);
     const [appliedFilters, setAppliedFilters] = useState<ShiftDashboardFilters>(defaultFilters);
@@ -55,60 +56,75 @@ export default function ShiftDashboard() {
         loadDropdownOptions();
     }, []);
 
-    // Load Dashboard Data
-    const fetchDashboardData = useCallback(async (activeFilters: ShiftDashboardFilters, _signal?: AbortSignal) => {
+    // Fetch the 3 summary APIs used when Dashboard is opened/refreshed.
+    const fetchSummaryCounts = useCallback(async (activeFilters: ShiftDashboardFilters) => {
+        const countFilters: Record<string, unknown> = {};
+
+        if (activeFilters.shiftTypes && activeFilters.shiftTypes.length > 0) {
+            countFilters.shiftType = activeFilters.shiftTypes;
+        }
+
+        const [activeResponse, inactiveResponse, nightResponse] = await Promise.all([
+            searchShifts({ ...countFilters, status: true }, 0, 1, "id,asc"),
+            searchShifts({ ...countFilters, status: false }, 0, 1, "id,asc"),
+            searchShifts({ ...countFilters, nightShift: true }, 0, 1, "id,asc")
+        ]);
+
+        const active = activeResponse.data?.totalElements ?? 0;
+        const inactive = inactiveResponse.data?.totalElements ?? 0;
+        const night = nightResponse.data?.totalElements ?? 0;
+
+        return {
+            total: active + inactive,
+            active,
+            inactive,
+            night
+        };
+    }, []);
+
+    // One API call for the actual dashboard data.
+    const fetchDashboardData = useCallback(async (activeFilters: ShiftDashboardFilters, _signal?: AbortSignal, summary?: { total: number; active: number; inactive: number; night: number }) => {
         setFailed(false);
         try {
             const statusVal = activeFilters.status.length === 1 ? activeFilters.status[0] === "Active" : undefined;
             const nightShiftVal = activeFilters.nightShift.length === 1 ? activeFilters.nightShift[0] === "Yes" : undefined;
-            const countFilters: Record<string, unknown> = {};
+
+            const searchParams: Record<string, unknown> = {};
             if (activeFilters.createdDateFrom) {
-                countFilters.createdDateFrom = activeFilters.createdDateFrom;
+                searchParams.createdDateFrom = activeFilters.createdDateFrom;
             }
             if (activeFilters.createdDateTo) {
-                countFilters.createdDateTo = activeFilters.createdDateTo;
+                searchParams.createdDateTo = activeFilters.createdDateTo;
             }
             if (activeFilters.shiftTypes && activeFilters.shiftTypes.length > 0) {
-                countFilters.shiftType = activeFilters.shiftTypes;
+                searchParams.shiftType = activeFilters.shiftTypes;
             }
-            const [activeResponse, inactiveResponse, nightResponse, totalResponse] = await Promise.all([
-                searchShifts({ ...countFilters, status: true }, 0, 1, "id,asc"),
-                searchShifts({ ...countFilters, status: false }, 0, 1, "id,asc"),
-                searchShifts({ ...countFilters, nightShift: true }, 0, 1, "id,asc"),
-                Object.keys(countFilters).length > 0 ? searchShifts(countFilters, 0, 1, "id,asc") : getShiftList(0, 1, "id,asc")
-            ]);
-            const activeCount = activeResponse.data?.totalElements ?? 0;
-            const inactiveCount = inactiveResponse.data?.totalElements ?? 0;
-            const totalCount = totalResponse.data?.totalElements ?? (activeCount + inactiveCount);
-            const nightCount = nightResponse.data?.totalElements ?? 0;
-            const searchParams: Record<string, unknown> = { ...countFilters };
             if (statusVal !== undefined) {
                 searchParams.status = statusVal;
             }
             if (nightShiftVal !== undefined) {
                 searchParams.nightShift = nightShiftVal;
             }
+
             const hasActiveFilter = Object.keys(searchParams).length > 0;
-            let targetTotal = totalCount;
-            if (statusVal !== undefined) {
-                targetTotal = statusVal ? activeCount : inactiveCount;
-            } else if (nightShiftVal !== undefined) {
-                targetTotal = nightShiftVal ? nightCount : Math.max(0, totalCount - nightCount);
-            }
-            let shiftList: ShiftResponse[] = [];
-            const fetchSize = Math.min(Math.max(targetTotal, 1), totalCount);
-            if (targetTotal > 0) {
-                const response = hasActiveFilter ? await searchShifts(searchParams, 0, fetchSize, "id,asc") : await getShiftList(0, fetchSize, "id,asc");
-                shiftList = response.data?.content ?? [];
-                const totalPages = response.data?.totalPages ?? 1;
-                if (totalPages > 1 && shiftList.length < targetTotal) {
-                    for (let page = 1; page < totalPages && page < 10; page++) {
-                        const nextRes = hasActiveFilter ? await searchShifts(searchParams, page, fetchSize, "id,asc") : await getShiftList(page, fetchSize, "id,asc");
-                        shiftList.push(...(nextRes.data?.content ?? []));
-                    }
-                }
-            }
+
+            const fetchSize = summary?.total ?? 10;
+
+            const response = hasActiveFilter
+                ? await searchShifts(searchParams, 0, fetchSize, "id,asc")
+                : await getShiftList(0, fetchSize, "id,asc");
+            const shiftList: ShiftResponse[] = response.data?.content ?? [];
             setAllShifts(shiftList);
+
+            const calculatedActive = shiftList.filter(s => Boolean(s.status) && !Boolean(s.isDeleted)).length;
+            const calculatedInactive = shiftList.filter(s => !Boolean(s.status) || Boolean(s.isDeleted)).length;
+            const calculatedNight = shiftList.filter(s => Boolean(s.nightShift)).length;
+
+            const totalCount = summary?.total ?? response.data?.totalElements ?? shiftList.length;
+            const activeCount = summary?.active ?? calculatedActive;
+            const inactiveCount = summary?.inactive ?? calculatedInactive;
+            const nightCount = summary?.night ?? calculatedNight;
+
             // Group by creation trends (YYYY-MM-DD)
             const trendsMap = new Map<string, number>();
             shiftList.forEach(s => {
@@ -131,6 +147,7 @@ export default function ShiftDashboard() {
                 else entry.inactive += 1;
                 typeMap.set(type, entry);
             });
+
             const dayCount = Math.max(0, totalCount - nightCount);
             const computedAnalytics: ShiftAnalytics = {
                 total: totalCount,
@@ -152,37 +169,60 @@ export default function ShiftDashboard() {
         }
     }, []);
 
-    useEffect(() => {
-        let ignore = false;
-        abortControllerRef.current?.abort();
-        const controller = new AbortController();
-        abortControllerRef.current = controller;
-        Promise.resolve().then(() => {
-            if (!ignore) {
-                void fetchDashboardData(appliedFilters, controller.signal);
-            }
-        });
-        return () => { ignore = true; controller.abort(); };
-    }, [fetchDashboardData, appliedFilters]);
-
-    const handleApplyFilters = () => { setLoading(true); setAppliedFilters({ ...filters }); };
-
-    const handleResetFilters = () => {
+    // Dashboard entry = 3 summary APIs + 1 dashboard data API.
+    const loadInitialDashboard = useCallback(async (activeFilters: ShiftDashboardFilters) => {
         setLoading(true);
+        setFailed(false);
+        try {
+            const summary = await fetchSummaryCounts(activeFilters);
+            setSummaryCounts(summary);
+            await fetchDashboardData(activeFilters, undefined, summary);
+        } catch (err) {
+            if (!isCancel(err)) {
+                console.error("Failed to load dashboard summary:", err);
+                setFailed(true);
+                setLoading(false);
+                setRefreshing(false);
+            }
+        }
+    }, [fetchSummaryCounts, fetchDashboardData]);
+
+    // Run the initial Dashboard load only once when this component is mounted.
+    useEffect(() => {
         const def = defaultFilters();
         setFilters(def);
         setAppliedFilters(def);
+        void loadInitialDashboard(def);
+
+        return () => {
+            abortControllerRef.current?.abort();
+        };
+    }, [loadInitialDashboard]);
+
+    const handleApplyFilters = () => {
+        const nextFilters = { ...filters };
+        setLoading(true);
+        setAppliedFilters(nextFilters);
+        void fetchDashboardData(nextFilters, undefined, summaryCounts ?? undefined);
+    };
+
+    const handleResetFilters = () => {
+        const def = defaultFilters();
+        setLoading(true);
+        setFilters(def);
+        setAppliedFilters(def);
+        void fetchDashboardData(def, undefined, summaryCounts ?? undefined);
     };
 
     const handleRefresh = () => {
-        setRefreshing(true);
         const def = defaultFilters();
+        setRefreshing(true);
         setFilters(def);
         setAppliedFilters(def);
         setDrilldown(null);
         setDrilldownOpen(false);
         getShiftDropdownOptions().then(res => setDropdownOptions(res.data)).catch(() => { });
-        void fetchDashboardData(def);
+        void loadInitialDashboard(def);
     };
 
     // ----------------- Drilldown Click Handlers -----------------
@@ -316,23 +356,27 @@ export default function ShiftDashboard() {
                 night={analytics?.nightDistribution.find(d => d.name === "Night Shift")?.count ?? 0}
                 activeStatusFilter={activeTileStatus}
                 onTileClick={type => {
+                    let nextFilters: ShiftDashboardFilters = defaultFilters();
+
                     if (type === "total") {
-                        const totalFilters = defaultFilters();
-                        setFilters(totalFilters);
-                        setAppliedFilters(totalFilters);
+                        nextFilters = { ...nextFilters, createdDateFrom: "", createdDateTo: "" };
                     } else if (type === "active") {
-                        const activeFilters = { ...defaultFilters(), status: ["Active"] };
-                        setFilters(activeFilters);
-                        setAppliedFilters(activeFilters);
+                        nextFilters = { ...nextFilters, status: ["Active"] };
                     } else if (type === "inactive") {
-                        const inactiveFilters = { ...defaultFilters(), status: ["Inactive"] };
-                        setFilters(inactiveFilters);
-                        setAppliedFilters(inactiveFilters)
+                        nextFilters = { ...nextFilters, status: ["Inactive"] };
                     } else if (type === "night") {
-                        const nightFilters = { ...defaultFilters(), nightShift: ["Yes"] };
-                        setFilters(nightFilters);
-                        setAppliedFilters(nightFilters);
+                        nextFilters = { ...nextFilters, nightShift: ["Yes"] };
                     }
+
+                    setLoading(true);
+                    setFilters(nextFilters);
+                    setAppliedFilters(nextFilters);
+
+                    void fetchDashboardData(
+                        nextFilters,
+                        undefined,
+                        summaryCounts ?? undefined
+                    );
                 }}
             />
             {/* Search Filters Card */}

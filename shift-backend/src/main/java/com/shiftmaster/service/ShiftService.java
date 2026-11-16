@@ -110,9 +110,10 @@ public class ShiftService {
         return shifts.map(shiftMapper::toResponse);
     }
 
-    public ResponseEntity<ShiftResponseDto> getShiftById(Long id) {
+    @Cacheable(value = "shiftById", key = "#id")
+    public ShiftResponseDto getShiftById(Long id) {
         Shift shift = shiftRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Shift not found with id: " + id));
-        return ResponseEntity.ok(shiftMapper.toResponse(shift));
+        return shiftMapper.toResponse(shift);
     }
 
     @Cacheable(value = "shiftList", key = "#request.toString() + '-' + #pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString()")

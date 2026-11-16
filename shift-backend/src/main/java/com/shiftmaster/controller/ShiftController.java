@@ -59,7 +59,7 @@ public class ShiftController {
 
     @GetMapping("{id}")
     public ResponseEntity<ShiftResponseDto> getShiftById(@PathVariable Long id) {
-        return shiftService.getShiftById(id);
+        return ResponseEntity.ok(shiftService.getShiftById(id));
     }
 
     @PostMapping("search")

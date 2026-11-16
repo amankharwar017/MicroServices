@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { ChangeEvent, MouseEvent } from "react";
 import type { GridSortModel } from "@mui/x-data-grid";
-import { Box, Button,Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Drawer, IconButton, Tooltip, Typography, Menu, MenuItem } from "@mui/material";
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Drawer, IconButton, Tooltip, Typography, Menu, MenuItem } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -9,7 +9,7 @@ import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import FileUploadOutlinedIcon from "@mui/icons-material/FileUploadOutlined";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { useDispatch, useSelector } from "react-redux";
-import type {MRT_ColumnDef,MRT_PaginationState,MRT_SortingState} from "material-react-table";
+import type { MRT_ColumnDef, MRT_PaginationState, MRT_SortingState } from "material-react-table";
 import Sidebar from "../../components/Sidebar";
 import Header from "../../components/Header";
 import Table from "../../components/Table";
@@ -110,7 +110,7 @@ type PageType = "dashboard" | "master";
 
 function Activityboard({ activePage, onPageChange, username, role, onLogout }: { activePage: PageType; onPageChange: (page: PageType) => void; username: string; role: string; onLogout: () => void; }) {
     const dispatch = useDispatch();
-    const shifts = useSelector((state: RootState) => state.shift.shifts);
+    const shifts = useSelector<RootState, ShiftResponse[]>((state) => state.shift.shifts);
     const [showForm, setShowForm] = useState(false);
     const [editShiftId, setEditShiftId] = useState<number | null>(null);
     const [searchParams, setSearchParams] = useState<Record<string, any>>({ status: true });
@@ -181,48 +181,48 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
     const refreshSummaryCards = (_keys: SummaryCountKey[]) => { setSummaryCountsRefresh((previous) => previous + 1); };
     const refreshShiftData = async () => { await fetchShifts(); };
 
-   
-const handleFormSuccess = async (
-    message: string,
-    changes?: { statusChanged: boolean; nightShiftChanged: boolean; restored: boolean; },
-    updatedData?: Record<string, unknown>) => {
-    const currentEditId = editShiftId;
-    setShowForm(false);
-    setEditShiftId(null);
 
-    if (message === "No changes detected.") {
-        await showTimedAlert("Info!", message, "success");
-        return;
-    }
+    const handleFormSuccess = async (
+        message: string,
+        changes?: { statusChanged: boolean; nightShiftChanged: boolean; restored: boolean; },
+        updatedData?: Record<string, unknown>) => {
+        const currentEditId = editShiftId;
+        setShowForm(false);
+        setEditShiftId(null);
 
-    window.dispatchEvent(new Event("shift-notification-update"));
+        if (message === "No changes detected.") {
+            await showTimedAlert("Info!", message, "success");
+            return;
+        }
 
-    if (currentEditId === null) {
-        await fetchShifts();
-        refreshSummaryCards(["total", "active", "inactive", "night"]);
-    } else if (updatedData) {
-        const previousShift = shifts.find(
-            (shift) => shift.id === currentEditId
-        );
+        window.dispatchEvent(new Event("shift-notification-update"));
 
-        if (previousShift) {
-            const updatedShift = {  ...previousShift,  ...updatedData, isDeleted: updatedData.status === true ? false : previousShift.isDeleted } as ShiftResponse;
-            const updatedShifts = shifts.map((shift) => shift.id === currentEditId ? updatedShift : shift ) .filter((shift) =>
-                    searchParams.status === true? shift.status === true: searchParams.status === false ? shift.status === false: true );
-            dispatch(setShifts(updatedShifts));
-            if (changes) {
-                const activeDelta =Number(updatedShift.status) - Number(previousShift.status);
-                const inactiveDelta = Number(!updatedShift.status) - Number(!previousShift.status);
-                const nightDelta = Number(updatedShift.nightShift) - Number(previousShift.nightShift);
-                if (activeDelta !== 0 || inactiveDelta !== 0 || nightDelta !== 0) {
-                    setSummaryCountsUpdate((previous) => ({ ...previous, version: previous.version + 1, totalDelta: 0, activeDelta, inactiveDelta,nightDelta }));
+        if (currentEditId === null) {
+            await fetchShifts();
+            refreshSummaryCards(["total", "active", "inactive", "night"]);
+        } else if (updatedData) {
+            const previousShift = shifts.find(
+                (shift) => shift.id === currentEditId
+            );
+
+            if (previousShift) {
+                const updatedShift = { ...previousShift, ...updatedData, isDeleted: updatedData.status === true ? false : previousShift.isDeleted } as ShiftResponse;
+                const updatedShifts = shifts.map((shift) => shift.id === currentEditId ? updatedShift : shift).filter((shift) =>
+                    searchParams.status === true ? shift.status === true : searchParams.status === false ? shift.status === false : true);
+                dispatch(setShifts(updatedShifts));
+                if (changes) {
+                    const activeDelta = Number(updatedShift.status) - Number(previousShift.status);
+                    const inactiveDelta = Number(!updatedShift.status) - Number(!previousShift.status);
+                    const nightDelta = Number(updatedShift.nightShift) - Number(previousShift.nightShift);
+                    if (activeDelta !== 0 || inactiveDelta !== 0 || nightDelta !== 0) {
+                        setSummaryCountsUpdate((previous) => ({ ...previous, version: previous.version + 1, totalDelta: 0, activeDelta, inactiveDelta, nightDelta }));
+                    }
                 }
             }
         }
-    }
 
-    await showTimedAlert("Success!", message, "success");
-};
+        await showTimedAlert("Success!", message, "success");
+    };
 
 
     const handleDelete = async (shift?: ShiftResponse, action?: "confirm" | "cancel") => {
@@ -538,30 +538,30 @@ const handleFormSuccess = async (
                                     <Table<ShiftResponse>
                                         data={shifts}
                                         columns={shiftColumns.map((column) => ({
-    ...column,
-    Cell: column.accessorKey === "shiftCode"
-        ? ({ row }) => (
-            <Typography
-                component="button"
-                onClick={() => handleViewHistory(row.original.id)}
-                sx={{
-                    border: 0,
-                    background: "transparent",
-                    padding: 0,
-                    color: "#1976d2",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    fontSize: "inherit",
-                    textAlign: "left",
-                    "&:hover": { textDecoration: "underline" }
-                }}
-            >
-                {row.original.shiftCode}
-            </Typography>
-        )
-        : ({ row }) => renderShiftValue(row.original, column.accessorKey as keyof ShiftResponse)
-}))}
+                                            ...column,
+                                            Cell: column.accessorKey === "shiftCode"
+                                                ? ({ row }) => (
+                                                    <Typography
+                                                        component="button"
+                                                        onClick={() => handleViewHistory(row.original.id)}
+                                                        sx={{
+                                                            border: 0,
+                                                            background: "transparent",
+                                                            padding: 0,
+                                                            color: "#1976d2",
+                                                            fontWeight: 600,
+                                                            cursor: "pointer",
+                                                            fontFamily: "inherit",
+                                                            fontSize: "inherit",
+                                                            textAlign: "left",
+                                                            "&:hover": { textDecoration: "underline" }
+                                                        }}
+                                                    >
+                                                        {row.original.shiftCode}
+                                                    </Typography>
+                                                )
+                                                : ({ row }) => renderShiftValue(row.original, column.accessorKey as keyof ShiftResponse)
+                                        }))}
                                         getRowId={(row) => String(row.id)}
                                         recordCount={totalRows}
                                         countText={`Total: ${totalRows}`}

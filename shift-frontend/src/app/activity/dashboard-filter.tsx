@@ -2,6 +2,7 @@ import { Box, Button, Chip, Paper, Typography } from "@mui/material";
 import type { Dispatch, SetStateAction } from "react";
 import TextField from "../../components/TextField";
 import MultiselectAutoComplete from "../../components/MultiselectAutoComplete";
+import dayjs from "dayjs";
 
 export type ShiftDashboardFilters = {
     search?: string;
@@ -55,6 +56,8 @@ export default function DashboardFilterBar({
         chips.push({ label: `To: ${appliedFilters.createdDateTo}`, type: "createdDateTo", value: appliedFilters.createdDateTo });
     }
 
+    const today = dayjs().format("YYYY-MM-DD");
+    const sevenDaysAgo = dayjs().subtract(7, "day").format("YYYY-MM-DD");
     const removeFilter = (type: string, value?: string) => {
         if (type === "shiftType") {
             const shiftTypes = appliedFilters.shiftTypes.filter(item => item !== value);
@@ -97,10 +100,13 @@ export default function DashboardFilterBar({
                 <TextField
                     size="small"
                     type="date"
-                    label="Created To"
-                    name="createdDateTo"
-                    value={filters.createdDateTo}
-                    onChange={event => { const value = event.target.value; setFilters(prev => ({ ...prev, createdDateTo: value })); setAppliedFilters(prev => ({ ...prev, createdDateTo: value }));}}
+                    label="Created From"
+                    name="createdDateFrom"
+                    value={filters.createdDateFrom}
+                    onChange={event => {
+                        const value = event.target.value;
+                        setFilters(prev => ({ ...prev, createdDateFrom: value }));
+                    }}
                     slotProps={{ inputLabel: { shrink: true } }}
                 />
                 <TextField
@@ -116,15 +122,23 @@ export default function DashboardFilterBar({
                     label="Shift Type"
                     name="shiftType"
                     value={filters.shiftTypes}
-                    options={ optionsData?.shiftTypes?.map(item => ({ label: item.name, value: item.name })) ?? [] }
+                    options={[ { label: "All", value: "All" }, ...(optionsData?.shiftTypes?.map(item => ({ label: item.name, value: item.name })) ?? []) ]}
                     multiple
-                    onChange={value => {setFilters(prev => ({ ...prev, shiftTypes: Array.isArray(value) ? value : [] })); }}
+                    onChange={value => {
+                        const selected = Array.isArray(value) ? value : [];
+                        const allShiftTypes = optionsData?.shiftTypes?.map(item => item.name) ?? [];
+                        if (selected.includes("All")) {
+                            setFilters(prev => ({ ...prev, shiftTypes: allShiftTypes }));
+                        } else {
+                            setFilters(prev => ({ ...prev, shiftTypes: selected }));
+                        }
+                    }}
                 />
                 <MultiselectAutoComplete
                     label="Status"
                     name="status"
                     value={filters.status}
-                    options={[  { label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }]}
+                    options={[{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }]}
                     multiple
                     onChange={value => { setFilters(prev => ({ ...prev, status: Array.isArray(value) ? value : [] })); }}
                 />
@@ -132,7 +146,7 @@ export default function DashboardFilterBar({
                     label="Night Shift"
                     name="nightShift"
                     value={filters.nightShift}
-                    options={[ { label: "Yes", value: "Yes" }, { label: "No", value: "No" }]}
+                    options={[{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }]}
                     multiple
                     onChange={value => { setFilters(prev => ({ ...prev, nightShift: Array.isArray(value) ? value : [] })); }}
                 />
