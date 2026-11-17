@@ -26,6 +26,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -121,6 +122,51 @@ public class ShiftService {
         Page<Shift> shifts = shiftRepository.findAll(shiftUtil.createShiftSearchSpecification(request), pageable);
         return shifts.map(shiftMapper::toResponse);
     }
+
+
+    public List<Map<String, Object>> getCreationTrends(String level) {
+        List<Object[]> results;
+        switch (level.toUpperCase()) {
+            case "YEARLY": results = shiftRepository.getYearlyCreationTrends();
+            return results.stream().map(row -> {
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("month", String.valueOf(row[0]));
+                    data.put("count", ((Number) row[1]).longValue());
+                    return data;
+                }).toList();
+
+            case "MONTHLY": results = shiftRepository.getMonthlyCreationTrends();
+            return results.stream().map(row -> {
+                    Map<String, Object> data = new HashMap<>();
+                    int year = ((Number) row[0]).intValue();
+                    int month = ((Number) row[1]).intValue();
+                    data.put("month", String.format("%04d-%02d", year, month));
+                    data.put("count", ((Number) row[2]).longValue());
+                    return data;
+                }).toList();
+
+            case "WEEKLY": results = shiftRepository.getWeeklyCreationTrends();
+                return results.stream().map(row -> {
+                    Map<String, Object> data = new HashMap<>();
+                    int year = ((Number) row[0]).intValue();
+                    int week = ((Number) row[1]).intValue();
+                    data.put("month", String.format("%04d-W%02d", year, week));
+                    data.put("count", ((Number) row[2]).longValue());
+                    return data;
+                }).toList();
+
+            case "DAILY": results = shiftRepository.getDailyCreationTrends();
+                return results.stream().map(row -> {Map<String, Object> data = new HashMap<>();
+                    data.put("month", row[0].toString());
+                    data.put("count", ((Number) row[1]).longValue());
+                    return data;
+                }).toList();
+
+            default: throw new IllegalArgumentException("Invalid trend level. Use YEARLY, MONTHLY, WEEKLY or DAILY");
+        }
+    }
+
+
 
     public List<String> validateSingleShift(Map<String, Object> row) {
         Set<String> errors = new LinkedHashSet<>();

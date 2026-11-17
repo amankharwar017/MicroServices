@@ -10,7 +10,7 @@ import DashboardChartCard from "../../components/DashboardChartCard";
 import DashboardStatTiles from "../../components/DashboardStatTiles";
 import DashboardFilterBar from "./dashboard-filter";
 import ShiftDrilldownDialog from "../../components/ShiftDrilldownDialog";
-import { getShiftDropdownOptions, getShiftList, searchShifts } from "../shift-api";
+import { getShiftDropdownOptions, getShiftList, searchShifts, getCreationTrends } from "../shift-api";
 import type { ShiftDropdownOptionsResponse, ShiftResponse } from "../../types/shift";
 import type { ChartEngine, TableBreakdownRow, DrilldownPayload, ShiftAnalytics } from "../../types/chartTypes";
 import type { ShiftDashboardFilters } from "./dashboard-filter";
@@ -39,6 +39,7 @@ export default function ShiftDashboard() {
     const [dropdownOptions, setDropdownOptions] = useState<ShiftDropdownOptionsResponse | null>(null);
     const [filters, setFilters] = useState<ShiftDashboardFilters>(defaultFilters);
     const [appliedFilters, setAppliedFilters] = useState<ShiftDashboardFilters>(defaultFilters);
+    const [trendLevel, setTrendLevel] = useState<"YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY">("YEARLY");
     const [drilldown, setDrilldown] = useState<DrilldownPayload | null>(null);
     const [drilldownShifts, setDrilldownShifts] = useState<ShiftResponse[]>([]);
     const [drilldownOpen, setDrilldownOpen] = useState(false);
@@ -55,6 +56,12 @@ export default function ShiftDashboard() {
         };
         loadDropdownOptions();
     }, []);
+
+    const fetchCreationTrends = async (level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY", dateFrom = appliedFilters.createdDateFrom, dateTo = appliedFilters.createdDateTo) => {
+        const response = await getCreationTrends(level, dateFrom, dateTo);
+        setTrendLevel(level);
+        setAnalytics(prev => prev ? { ...prev, creationTrends: response.data ?? [] } : prev);
+    };
 
     // Fetch the 3 summary APIs used when Dashboard is opened/refreshed.
     const fetchSummaryCounts = useCallback(async (activeFilters: ShiftDashboardFilters) => {
@@ -125,14 +132,7 @@ export default function ShiftDashboard() {
             const inactiveCount = summary?.inactive ?? calculatedInactive;
             const nightCount = summary?.night ?? calculatedNight;
 
-            // Group by creation trends (YYYY-MM-DD)
-            const trendsMap = new Map<string, number>();
-            shiftList.forEach(s => {
-                if (s.createdAt) {
-                    const dateStr = s.createdAt.slice(0, 10);
-                    trendsMap.set(dateStr, (trendsMap.get(dateStr) ?? 0) + 1);
-                }
-            });
+
 
             // Group by Shift Type
             const typeMap = new Map<string, { name: string; count: number; active: number; inactive: number }>();
@@ -153,11 +153,11 @@ export default function ShiftDashboard() {
                 total: totalCount,
                 active: activeCount,
                 inactive: inactiveCount,
-                creationTrends: Array.from(trendsMap.entries()).map(([month, count]) => ({ month, count })).sort((a, b) => a.month.localeCompare(b.month)),
+                creationTrends: [],
                 shiftsByType: Array.from(typeMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
                 nightDistribution: [{ name: "Night Shift", count: nightCount }, { name: "Day Shift", count: dayCount }]
             };
-            setAnalytics(computedAnalytics);
+            setAnalytics(prev => ({ ...computedAnalytics, creationTrends: prev?.creationTrends ?? [] }));
         } catch (err) {
             if (!isCancel(err)) {
                 console.error("Failed to load shift dashboard data:", err);
@@ -177,6 +177,7 @@ export default function ShiftDashboard() {
             const summary = await fetchSummaryCounts(activeFilters);
             setSummaryCounts(summary);
             await fetchDashboardData(activeFilters, undefined, summary);
+            await fetchCreationTrends("YEARLY");
         } catch (err) {
             if (!isCancel(err)) {
                 console.error("Failed to load dashboard summary:", err);
@@ -204,6 +205,7 @@ export default function ShiftDashboard() {
         setLoading(true);
         setAppliedFilters(nextFilters);
         void fetchDashboardData(nextFilters, undefined, summaryCounts ?? undefined);
+        void fetchCreationTrends(trendLevel, nextFilters.createdDateFrom, nextFilters.createdDateTo);
     };
 
     const handleResetFilters = () => {
@@ -212,6 +214,7 @@ export default function ShiftDashboard() {
         setFilters(def);
         setAppliedFilters(def);
         void fetchDashboardData(def, undefined, summaryCounts ?? undefined);
+        void fetchCreationTrends(trendLevel, def.createdDateFrom, def.createdDateTo);
     };
 
     const handleRefresh = () => {
@@ -356,27 +359,22 @@ export default function ShiftDashboard() {
                 night={analytics?.nightDistribution.find(d => d.name === "Night Shift")?.count ?? 0}
                 activeStatusFilter={activeTileStatus}
                 onTileClick={type => {
-                    let nextFilters: ShiftDashboardFilters = defaultFilters();
+                    let nextFilters: ShiftDashboardFilters = { ...appliedFilters };
 
                     if (type === "total") {
-                        nextFilters = { ...nextFilters, createdDateFrom: "", createdDateTo: "" };
+                        nextFilters = { ...nextFilters, status: [], nightShift: [], shiftTypes: [], createdDateFrom: "", createdDateTo: "" };
                     } else if (type === "active") {
-                        nextFilters = { ...nextFilters, status: ["Active"] };
+                        nextFilters = { ...nextFilters, status: ["Active"], nightShift: [] };
                     } else if (type === "inactive") {
-                        nextFilters = { ...nextFilters, status: ["Inactive"] };
+                        nextFilters = { ...nextFilters, status: ["Inactive"], nightShift: [] };
                     } else if (type === "night") {
-                        nextFilters = { ...nextFilters, nightShift: ["Yes"] };
+                        nextFilters = { ...nextFilters, status: [], nightShift: ["Yes"] };
                     }
 
                     setLoading(true);
                     setFilters(nextFilters);
                     setAppliedFilters(nextFilters);
-
-                    void fetchDashboardData(
-                        nextFilters,
-                        undefined,
-                        summaryCounts ?? undefined
-                    );
+                    void fetchDashboardData(nextFilters, undefined, summaryCounts ?? undefined);
                 }}
             />
             {/* Search Filters Card */}
@@ -407,6 +405,7 @@ export default function ShiftDashboard() {
                             valueFields={[{ field: "count", name: "Shifts", color: "#1976d2" }]}
                             drillDown
                             engine={engine}
+                            onTrendLevelChange={fetchCreationTrends}
                             onBarClick={cat => { handleDrilldown({ source: "trends", title: `Shifts Created on ${cat}`, label: cat, value: cat }); }}
                         />
                     </DashboardChartCard>

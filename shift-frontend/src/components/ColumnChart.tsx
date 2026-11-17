@@ -1,9 +1,9 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import {Box, Button, Typography, ToggleButton, ToggleButtonGroup, FormControl, InputLabel, Select, MenuItem, useTheme} from "@mui/material";
+import { Box, Button, Typography, ToggleButton, ToggleButtonGroup, FormControl, InputLabel, Select, MenuItem, useTheme } from "@mui/material";
 import * as am5 from "@amcharts/amcharts5";
 import * as am5xy from "@amcharts/amcharts5/xy";
 import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
-import {ResponsiveContainer, BarChart, Bar, XAxis, YAxis,CartesianGrid, Tooltip as RechartsTooltip, Legend as RechartsLegend} from "recharts";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend as RechartsLegend } from "recharts";
 import Chart from "react-apexcharts";
 import type { ApexOptions } from "apexcharts";
 import type { ChartEngine, ChartValueField } from "../types/chartTypes";
@@ -23,6 +23,9 @@ export type ColumnChartProps = {
     height?: number;
     engine?: ChartEngine;
     onBarClick?: (category: string, field?: string, value?: number) => void;
+    onTrendLevelChange?: (
+        level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY"
+    ) => void;
 };
 
 type TrendLevel = "year" | "month" | "week" | "day";
@@ -33,10 +36,11 @@ const toHexColor = (c: string | number | undefined, defaultColor = "#1976d2"): s
     return `#${c.toString(16).padStart(6, "0")}`;
 };
 
-export default function ColumnChart({title,data,categoryField,valueFields,stacked = false,drillDown = false,height = 320,engine = "recharts",onBarClick}: ColumnChartProps) {
+export default function ColumnChart({ title, data, categoryField, valueFields, stacked = false, drillDown = false, height = 320, engine = "recharts", onBarClick, onTrendLevelChange }: ColumnChartProps) {
     const theme = useTheme();
     const am5Ref = useRef<HTMLDivElement>(null);
     const [level, setLevel] = useState<TrendLevel>("year");
+    const trendLevelMap: Record<TrendLevel, "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY"> = { year: "YEARLY", month: "MONTHLY", week: "WEEKLY", day: "DAILY", };
     const [year, setYear] = useState(new Date().getFullYear());
     const [month, setMonth] = useState(new Date().getMonth() + 1);
     const [week, setWeek] = useState(1);
@@ -56,72 +60,32 @@ export default function ColumnChart({title,data,categoryField,valueFields,stacke
         return Array.from(years).sort((a, b) => b - a);
     }, [data, categoryField]);
 
-    const selectedYear = availableYears.includes(year)? year: availableYears[0] ?? year;
+    const selectedYear = availableYears.includes(year) ? year : availableYears[0] ?? year;
 
     const rows = useMemo<ChartRow[]>(() => {
-        const source = data as ChartRow[];
-        if (!drillDown) {
-            return source.map(item => ({ ...item,category: String(item[categoryField] ?? "")}));
-        }
-
-        const grouped = new Map<string, number>();
-        const prefix = `${selectedYear}-${String(month).padStart(2, "0")}`;
-        const countField = valueFields[0]?.field ?? "count";
-
-        source.forEach(item => {
-            const raw = String(item[categoryField] ?? "");
-            const date = raw.length > 10 ? raw.slice(0, 10) : raw;
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-            let key: string;
-            if (level === "year") {
-                key = date.slice(0, 4);
-            } else if (level === "month") {
-                if (!date.startsWith(`${selectedYear}-`)) return;
-                key = date.slice(0, 7);
-            } else if (level === "week") {
-                if (!date.startsWith(`${prefix}-`)) return;
-                const day = Number(date.slice(8, 10));
-                const weekNumber = Math.ceil(day / 7);
-                key = `Week ${weekNumber}`;
-            } else {
-                const selectedWeekStart = (week - 1) * 7 + 1;
-                const selectedWeekEnd = week * 7;
-                if (!date.startsWith(`${prefix}-`)) return;
-                const day = Number(date.slice(8, 10));
-                if (day < selectedWeekStart || day > selectedWeekEnd) return;
-                key = date.slice(8, 10);
-            }
-
-            const count = Number(item[countField] ?? 0);
-            grouped.set(key,(grouped.get(key) ?? 0) + count);
-        });
-
-        return Array.from(grouped, ([category, count]) => ({ category, [countField]: count})).sort((a, b) => {
-            if (level === "week") {
-                return ( Number(a.category.replace("Week ", "")) -Number(b.category.replace("Week ", "")) );
-            }
-            return a.category.localeCompare(b.category);
-        });
-    }, [ data, categoryField, valueFields, drillDown, level, selectedYear, month, week]);
-
-    const chartTitle = !drillDown? title : level === "year"? title: level === "month"? `Shift Creations in ${selectedYear}`: level === "week"
-                    ? `Weekly Creations — ${selectedYear}-${String(month).padStart(2, "0")}` : `Daily Creations — ${selectedYear}-${String(month).padStart(2, "0")} — Week ${week}`;
+        return (data as ChartRow[]).map(item => ({ ...item,category: String(item[categoryField] ?? ""), }));
+    }, [data, categoryField]);
+    const chartTitle = !drillDown ? title : level === "year" ? title : level === "month" ? `Shift Creations in ${selectedYear}` : level === "week"
+        ? `Weekly Creations — ${selectedYear}-${String(month).padStart(2, "0")}` : `Daily Creations — ${selectedYear}-${String(month).padStart(2, "0")} — Week ${week}`;
 
     const handleCategoryDrilldown = useCallback((category: string) => {
         if (!drillDown) return;
         if (level === "year") {
             setYear(Number(category));
             setLevel("month");
+            onTrendLevelChange?.("MONTHLY");
         } else if (level === "month") {
             const [selectedYr, selectedMo] = category.split("-").map(Number);
             setYear(selectedYr);
             setMonth(selectedMo);
             setWeek(1);
             setLevel("week");
+            onTrendLevelChange?.("WEEKLY");
         } else if (level === "week") {
             const selectedWeek = Number(category.replace("Week ", ""));
             setWeek(selectedWeek);
             setLevel("day");
+            onTrendLevelChange?.("DAILY");
         }
     }, [drillDown, level]);
 
@@ -130,11 +94,11 @@ export default function ColumnChart({title,data,categoryField,valueFields,stacke
         if (!am5Ref.current || !rows.length || engine !== "amcharts") return;
         const root = am5.Root.new(am5Ref.current);
         root.setThemes([am5themes_Animated.new(root)]);
-        const chart = root.container.children.push( am5xy.XYChart.new(root, { panX: false, panY: false }));
+        const chart = root.container.children.push(am5xy.XYChart.new(root, { panX: false, panY: false }));
         const xRenderer = am5xy.AxisRendererX.new(root, { minGridDistance: 30 });
-        xRenderer.labels.template.setAll({ rotation: -35, centerY: am5.p50, centerX: am5.p100, paddingRight: 10,fontSize: 12});
-        const xAxis = chart.xAxes.push( am5xy.CategoryAxis.new(root, { categoryField: "category", renderer: xRenderer }) );
-        const yAxis = chart.yAxes.push( am5xy.ValueAxis.new(root, { min: 0, renderer: am5xy.AxisRendererY.new(root, {})}));
+        xRenderer.labels.template.setAll({ rotation: -35, centerY: am5.p50, centerX: am5.p100, paddingRight: 10, fontSize: 12 });
+        const xAxis = chart.xAxes.push(am5xy.CategoryAxis.new(root, { categoryField: "category", renderer: xRenderer }));
+        const yAxis = chart.yAxes.push(am5xy.ValueAxis.new(root, { min: 0, renderer: am5xy.AxisRendererY.new(root, {}) }));
 
         valueFields.forEach(field => {
             const fieldHex = toHexColor(field.color, "#1976d2");
@@ -146,7 +110,7 @@ export default function ColumnChart({title,data,categoryField,valueFields,stacke
                     categoryXField: "category",
                     valueYField: field.field,
                     stacked,
-                    tooltip: am5.Tooltip.new(root, { labelText: "{name} - {categoryX}: {valueY}"}),
+                    tooltip: am5.Tooltip.new(root, { labelText: "{name} - {categoryX}: {valueY}" }),
                     fill: am5.color(fieldHex),
                     stroke: am5.color(fieldHex)
                 })
@@ -177,13 +141,12 @@ export default function ColumnChart({title,data,categoryField,valueFields,stacke
         xAxis.data.setAll(rows);
 
         if (valueFields.length > 1) {
-            const legend = chart.children.push(am5.Legend.new(root, { centerX: am5.p50, x: am5.p50 }) );
+            const legend = chart.children.push(am5.Legend.new(root, { centerX: am5.p50, x: am5.p50 }));
             legend.data.setAll(chart.series.values);
         }
 
         return root;
-    }, [rows, valueFields, stacked, drillDown, level, engine, onBarClick, handleCategoryDrilldown]);
-
+    }, [rows, valueFields, stacked, drillDown, level, engine, onBarClick, handleCategoryDrilldown, onTrendLevelChange]);
     useLayoutEffect(() => {
         if (engine !== "amcharts") return;
         const root = buildAmCharts();
@@ -193,10 +156,13 @@ export default function ColumnChart({title,data,categoryField,valueFields,stacke
     const goBack = () => {
         if (level === "day") {
             setLevel("week");
+            onTrendLevelChange?.("WEEKLY");
         } else if (level === "week") {
             setLevel("month");
+            onTrendLevelChange?.("MONTHLY");
         } else if (level === "month") {
             setLevel("year");
+            onTrendLevelChange?.("YEARLY");
         }
     };
 
@@ -231,13 +197,13 @@ export default function ColumnChart({title,data,categoryField,valueFields,stacke
                     }
                 }
             },
-            plotOptions: { bar: { horizontal: false, columnWidth: "55%", borderRadius: 4}},
-            colors: valueFields.map((f, i) =>toHexColor(f.color, ["#1976d2", "#2e7d32", "#d32f2f", "#f9a825"][i % 4])),
-            xaxis: {categories: rows.map(r => String(r.category)),labels: {rotate: -35,style: { fontSize: "11px", colors: "#64748b" }} },
-            yaxis: {labels: {style: { fontSize: "11px", colors: "#64748b" },formatter: val => Math.round(val).toString() }},
-            grid: { borderColor: "#f1f5f9", strokeDashArray: 3},
-            tooltip: { shared: true,intersect: false, theme: "light" },
-            legend: {show: valueFields.length > 1, position: "top", horizontalAlign: "center"}
+            plotOptions: { bar: { horizontal: false, columnWidth: "55%", borderRadius: 4 } },
+            colors: valueFields.map((f, i) => toHexColor(f.color, ["#1976d2", "#2e7d32", "#d32f2f", "#f9a825"][i % 4])),
+            xaxis: { categories: rows.map(r => String(r.category)), labels: { rotate: -35, style: { fontSize: "11px", colors: "#64748b" } } },
+            yaxis: { labels: { style: { fontSize: "11px", colors: "#64748b" }, formatter: val => Math.round(val).toString() } },
+            grid: { borderColor: "#f1f5f9", strokeDashArray: 3 },
+            tooltip: { shared: true, intersect: false, theme: "light" },
+            legend: { show: valueFields.length > 1, position: "top", horizontalAlign: "center" }
         };
     }, [stacked, theme.typography?.fontFamily, rows, valueFields, drillDown, level, handleCategoryDrilldown, onBarClick]);
 
@@ -254,7 +220,10 @@ export default function ColumnChart({title,data,categoryField,valueFields,stacke
                         exclusive
                         value={level}
                         onChange={(_, nextLevel: TrendLevel | null) => {
-                            if (nextLevel) setLevel(nextLevel);
+                            if (nextLevel) {
+                                setLevel(nextLevel);
+                                onTrendLevelChange?.(trendLevelMap[nextLevel]);
+                            }
                         }}
                     >
                         <ToggleButton value="year" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>
@@ -324,11 +293,11 @@ export default function ColumnChart({title,data,categoryField,valueFields,stacke
                     <BarChart data={rows} margin={{ top: 15, right: 20, left: -10, bottom: 35 }}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                         <XAxis dataKey="category" angle={-35} textAnchor="end" interval={0} tick={{ fontSize: 11, fill: "#64748b" }} />
-                        <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748b" }}  />
+                        <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748b" }} />
                         <RechartsTooltip contentStyle={{ backgroundColor: "#ffffff", borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", fontSize: "12px" }} />
-                        {valueFields.length > 1 && ( <RechartsLegend wrapperStyle={{ paddingTop: 8 }} /> )}
+                        {valueFields.length > 1 && (<RechartsLegend wrapperStyle={{ paddingTop: 8 }} />)}
                         {valueFields.map((field, idx) => {
-                            const barColor = toHexColor( field.color, ["#1976d2", "#2e7d32", "#d32f2f", "#f9a825"][idx % 4] );
+                            const barColor = toHexColor(field.color, ["#1976d2", "#2e7d32", "#d32f2f", "#f9a825"][idx % 4]);
 
                             return (
                                 <Bar
@@ -358,8 +327,8 @@ export default function ColumnChart({title,data,categoryField,valueFields,stacke
                     </BarChart>
                 </ResponsiveContainer>
             ) : (
-                <ApexChartComponent  type="bar"  height={height} series={apexSeries}  options={apexOptions} />
-              )}
+                <ApexChartComponent type="bar" height={height} series={apexSeries} options={apexOptions} />
+            )}
         </Box>
     );
 }
