@@ -566,11 +566,11 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
                                         recordCount={totalRows}
                                         countText={`Total: ${totalRows}`}
                                         emptyMessage="No shifts found"
-                                        enableRowActions
+                                        enableRowActions={role === "ADMIN"}
                                         renderRowActions={(shift) => (
                                             <Box className="shift-table-actions" sx={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 0.5 }}>
-                                                {shift.status && !shift.isDeleted && <Tooltip title="Delete"><IconButton size="small" className="shift-delete-button" onClick={() => handleDelete(shift)}><DeleteIcon fontSize="small" /></IconButton></Tooltip>}
-                                                <Tooltip title="Edit"><IconButton size="small" className="shift-edit-button" onClick={() => handleEdit(shift.id)}><EditIcon fontSize="small" /></IconButton></Tooltip>
+                                                {role === "ADMIN" && shift.status && !shift.isDeleted && <Tooltip title="Delete"><IconButton size="small" className="shift-delete-button" onClick={() => handleDelete(shift)}><DeleteIcon fontSize="small" /></IconButton></Tooltip>}
+                                                {role === "ADMIN" && <Tooltip title="Edit"><IconButton size="small" className="shift-edit-button" onClick={() => handleEdit(shift.id)}><EditIcon fontSize="small" /></IconButton></Tooltip>}
                                                 <Tooltip title="View"><IconButton size="small" className="shift-view-button" onClick={() => handleViewHistory(shift.id)}><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
                                             </Box>
                                         )}

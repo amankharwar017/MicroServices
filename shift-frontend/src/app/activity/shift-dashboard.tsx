@@ -360,21 +360,15 @@ export default function ShiftDashboard() {
                 activeStatusFilter={activeTileStatus}
                 onTileClick={type => {
                     let nextFilters: ShiftDashboardFilters = { ...appliedFilters };
-
-                    if (type === "total") {
-                        nextFilters = { ...nextFilters, status: [], nightShift: [], shiftTypes: [], createdDateFrom: "", createdDateTo: "" };
-                    } else if (type === "active") {
-                        nextFilters = { ...nextFilters, status: ["Active"], nightShift: [] };
-                    } else if (type === "inactive") {
-                        nextFilters = { ...nextFilters, status: ["Inactive"], nightShift: [] };
-                    } else if (type === "night") {
-                        nextFilters = { ...nextFilters, status: [], nightShift: ["Yes"] };
-                    }
-
+                    if (type === "total") nextFilters = { ...nextFilters, status: [], nightShift: [], shiftTypes: [], createdDateFrom: "", createdDateTo: "" };
+                    else if (type === "active") nextFilters = { ...nextFilters, status: ["Active"], nightShift: [] };
+                    else if (type === "inactive") nextFilters = { ...nextFilters, status: ["Inactive"], nightShift: [] };
+                    else if (type === "night") nextFilters = { ...nextFilters, status: [], nightShift: ["Yes"] };
                     setLoading(true);
                     setFilters(nextFilters);
                     setAppliedFilters(nextFilters);
                     void fetchDashboardData(nextFilters, undefined, summaryCounts ?? undefined);
+                    if (type === "total") void fetchCreationTrends("YEARLY", "", "");
                 }}
             />
             {/* Search Filters Card */}

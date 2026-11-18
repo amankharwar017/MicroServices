@@ -122,16 +122,12 @@ export default function DashboardFilterBar({
                     label="Shift Type"
                     name="shiftType"
                     value={filters.shiftTypes}
-                    options={[ { label: "All", value: "All" }, ...(optionsData?.shiftTypes?.map(item => ({ label: item.name, value: item.name })) ?? []) ]}
+                    options={[{ label: "All", value: "All" }, ...(optionsData?.shiftTypes?.map(item => ({ label: item.name, value: item.name })) ?? [])]}
                     multiple
                     onChange={value => {
                         const selected = Array.isArray(value) ? value : [];
                         const allShiftTypes = optionsData?.shiftTypes?.map(item => item.name) ?? [];
-                        if (selected.includes("All")) {
-                            setFilters(prev => ({ ...prev, shiftTypes: allShiftTypes }));
-                        } else {
-                            setFilters(prev => ({ ...prev, shiftTypes: selected }));
-                        }
+                        setFilters(prev => ({ ...prev, shiftTypes: selected.includes("All") ? selected.length === allShiftTypes.length + 1 ? [] : allShiftTypes : selected }));
                     }}
                 />
                 <MultiselectAutoComplete

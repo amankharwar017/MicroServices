@@ -25,8 +25,9 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/login","/auth/register","/api/public/**").permitAll()
-                        .requestMatchers("/shift/list", "/shift/search", "/shift/notifications", "/shift/history/**", "/shift/notifications/**", "/shift/dropdown-options","/shift/internal/validate","/shift/save-multiple").permitAll()
+                        .requestMatchers("/shift/list", "/shift/search", "/shift/notifications", "/shift/history/**", "/shift/notifications/**", "/shift/dropdown-options","/shift/internal/validate").permitAll()
                         .requestMatchers("/shift/delete/**", "/shift/save-multiple").hasRole("ADMIN")
+                        .requestMatchers( "/shift/save-multiple").hasRole("USER")
                         .anyRequest().authenticated())
                 .addFilterBefore(gatewayAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
