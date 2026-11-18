@@ -8,8 +8,8 @@ import PieChart from "../../components/PieChart";
 import GaugeChart from "../../components/GaugeChart";
 import DashboardChartCard from "../../components/DashboardChartCard";
 import DashboardStatTiles from "../../components/DashboardStatTiles";
-import DashboardFilterBar from "./dashboard-filter";
 import ShiftDrilldownDialog from "../../components/ShiftDrilldownDialog";
+import DashboardFilterBar from "./dashboard-filter";
 import { getShiftDropdownOptions, getShiftList, searchShifts, getCreationTrends } from "../shift-api";
 import type { ShiftDropdownOptionsResponse, ShiftResponse } from "../../types/shift";
 import type { ChartEngine, TableBreakdownRow, DrilldownPayload, ShiftAnalytics } from "../../types/chartTypes";
@@ -127,10 +127,10 @@ export default function ShiftDashboard() {
             const calculatedInactive = shiftList.filter(s => !Boolean(s.status) || Boolean(s.isDeleted)).length;
             const calculatedNight = shiftList.filter(s => Boolean(s.nightShift)).length;
 
-            const totalCount = summary?.total ?? response.data?.totalElements ?? shiftList.length;
-            const activeCount = summary?.active ?? calculatedActive;
-            const inactiveCount = summary?.inactive ?? calculatedInactive;
-            const nightCount = summary?.night ?? calculatedNight;
+            const totalCount = response.data?.totalElements ?? shiftList.length;
+            const activeCount = calculatedActive;
+            const inactiveCount = calculatedInactive;
+            const nightCount = calculatedNight;
 
 
 
@@ -177,7 +177,7 @@ export default function ShiftDashboard() {
             const summary = await fetchSummaryCounts(activeFilters);
             setSummaryCounts(summary);
             await fetchDashboardData(activeFilters, undefined, summary);
-            await fetchCreationTrends("YEARLY");
+            await fetchCreationTrends("YEARLY", activeFilters.createdDateFrom, activeFilters.createdDateTo);
         } catch (err) {
             if (!isCancel(err)) {
                 console.error("Failed to load dashboard summary:", err);
@@ -353,10 +353,10 @@ export default function ShiftDashboard() {
             {failed && (<Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>Failed to load dashboard data. Please verify your connection or try again. </Alert>)}
             {/* KPI Stat Tiles */}
             <DashboardStatTiles
-                total={analytics?.total ?? 0}
-                active={analytics?.active ?? 0}
-                inactive={analytics?.inactive ?? 0}
-                night={analytics?.nightDistribution.find(d => d.name === "Night Shift")?.count ?? 0}
+                total={summaryCounts?.total ?? 0}
+                active={summaryCounts?.active ?? 0}
+                inactive={summaryCounts?.inactive ?? 0}
+                night={summaryCounts?.night ?? 0}
                 activeStatusFilter={activeTileStatus}
                 onTileClick={type => {
                     let nextFilters: ShiftDashboardFilters = { ...appliedFilters };

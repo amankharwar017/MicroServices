@@ -1,5 +1,5 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Box, Button, Typography, ToggleButton, ToggleButtonGroup, FormControl, InputLabel, Select, MenuItem, useTheme } from "@mui/material";
+import { Box, Button, Typography, ToggleButton, ToggleButtonGroup, useTheme } from "@mui/material";
 import * as am5 from "@amcharts/amcharts5";
 import * as am5xy from "@amcharts/amcharts5/xy";
 import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
@@ -23,9 +23,7 @@ export type ColumnChartProps = {
     height?: number;
     engine?: ChartEngine;
     onBarClick?: (category: string, field?: string, value?: number) => void;
-    onTrendLevelChange?: (
-        level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY"
-    ) => void;
+    onTrendLevelChange?: (level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY") => void;
 };
 
 type TrendLevel = "year" | "month" | "week" | "day";
@@ -40,56 +38,28 @@ export default function ColumnChart({ title, data, categoryField, valueFields, s
     const theme = useTheme();
     const am5Ref = useRef<HTMLDivElement>(null);
     const [level, setLevel] = useState<TrendLevel>("year");
-    const trendLevelMap: Record<TrendLevel, "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY"> = { year: "YEARLY", month: "MONTHLY", week: "WEEKLY", day: "DAILY", };
-    const [year, setYear] = useState(new Date().getFullYear());
-    const [month, setMonth] = useState(new Date().getMonth() + 1);
-    const [week, setWeek] = useState(1);
-
-    const availableYears = useMemo(() => {
-        const years = new Set<number>();
-        (data as ChartRow[]).forEach(item => {
-            const raw = String(item[categoryField] ?? "");
-            const date = raw.length > 10 ? raw.slice(0, 10) : raw;
-            if (/^\d{4}-\d{2}-\d{2}$/.test(date) || /^\d{4}-\d{2}$/.test(date)) {
-                years.add(Number(date.slice(0, 4)));
-            }
-        });
-        if (years.size === 0) {
-            years.add(new Date().getFullYear());
-        }
-        return Array.from(years).sort((a, b) => b - a);
-    }, [data, categoryField]);
-
-    const selectedYear = availableYears.includes(year) ? year : availableYears[0] ?? year;
+    const trendLevelMap: Record<TrendLevel, "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY"> = { year: "YEARLY", month: "MONTHLY", week: "WEEKLY", day: "DAILY" };
 
     const rows = useMemo<ChartRow[]>(() => {
-        return (data as ChartRow[]).map(item => ({ ...item,category: String(item[categoryField] ?? ""), }));
+        return (data as ChartRow[]).map(item => ({ ...item, category: String(item[categoryField] ?? "") }));
     }, [data, categoryField]);
-    const chartTitle = !drillDown ? title : level === "year" ? title : level === "month" ? `Shift Creations in ${selectedYear}` : level === "week"
-        ? `Weekly Creations — ${selectedYear}-${String(month).padStart(2, "0")}` : `Daily Creations — ${selectedYear}-${String(month).padStart(2, "0")} — Week ${week}`;
+
+    const chartTitle = !drillDown ? title : level === "year" ? "Yearly Shift Creations" : level === "month" ? "Monthly Shift Creations" : level === "week" ? "Weekly Shift Creations" : "Daily Shift Creations";
 
     const handleCategoryDrilldown = useCallback((category: string) => {
         if (!drillDown) return;
         if (level === "year") {
-            setYear(Number(category));
             setLevel("month");
             onTrendLevelChange?.("MONTHLY");
         } else if (level === "month") {
-            const [selectedYr, selectedMo] = category.split("-").map(Number);
-            setYear(selectedYr);
-            setMonth(selectedMo);
-            setWeek(1);
             setLevel("week");
             onTrendLevelChange?.("WEEKLY");
         } else if (level === "week") {
-            const selectedWeek = Number(category.replace("Week ", ""));
-            setWeek(selectedWeek);
             setLevel("day");
             onTrendLevelChange?.("DAILY");
         }
-    }, [drillDown, level]);
+    }, [drillDown, level, onTrendLevelChange]);
 
-    // ----------------- AmCharts 5 Build -----------------
     const buildAmCharts = useCallback(() => {
         if (!am5Ref.current || !rows.length || engine !== "amcharts") return;
         const root = am5.Root.new(am5Ref.current);
@@ -102,26 +72,19 @@ export default function ColumnChart({ title, data, categoryField, valueFields, s
 
         valueFields.forEach(field => {
             const fieldHex = toHexColor(field.color, "#1976d2");
-            const series = chart.series.push(
-                am5xy.ColumnSeries.new(root, {
-                    name: field.name,
-                    xAxis,
-                    yAxis,
-                    categoryXField: "category",
-                    valueYField: field.field,
-                    stacked,
-                    tooltip: am5.Tooltip.new(root, { labelText: "{name} - {categoryX}: {valueY}" }),
-                    fill: am5.color(fieldHex),
-                    stroke: am5.color(fieldHex)
-                })
-            );
+            const series = chart.series.push(am5xy.ColumnSeries.new(root, {
+                name: field.name,
+                xAxis,
+                yAxis,
+                categoryXField: "category",
+                valueYField: field.field,
+                stacked,
+                tooltip: am5.Tooltip.new(root, { labelText: "{name} - {categoryX}: {valueY}" }),
+                fill: am5.color(fieldHex),
+                stroke: am5.color(fieldHex)
+            }));
 
-            series.columns.template.setAll({
-                tooltipText: "{name} - {categoryX}: {valueY}",
-                cornerRadiusTL: 4,
-                cornerRadiusTR: 4,
-                cursorOverStyle: (drillDown || onBarClick) ? "pointer" : "default"
-            });
+            series.columns.template.setAll({ tooltipText: "{name} - {categoryX}: {valueY}", cornerRadiusTL: 4, cornerRadiusTR: 4, cursorOverStyle: (drillDown || onBarClick) ? "pointer" : "default" });
 
             series.columns.template.events.on("click", event => {
                 const row = event.target.dataItem?.dataContext as ChartRow | undefined;
@@ -134,6 +97,7 @@ export default function ColumnChart({ title, data, categoryField, valueFields, s
                     onBarClick(cat, field.field, val);
                 }
             });
+
             series.data.setAll(rows);
             series.appear(600);
         });
@@ -146,7 +110,8 @@ export default function ColumnChart({ title, data, categoryField, valueFields, s
         }
 
         return root;
-    }, [rows, valueFields, stacked, drillDown, level, engine, onBarClick, handleCategoryDrilldown, onTrendLevelChange]);
+    }, [rows, valueFields, stacked, drillDown, level, engine, onBarClick, handleCategoryDrilldown]);
+
     useLayoutEffect(() => {
         if (engine !== "amcharts") return;
         const root = buildAmCharts();
@@ -166,7 +131,6 @@ export default function ColumnChart({ title, data, categoryField, valueFields, s
         }
     };
 
-    // ----------------- ApexCharts Options -----------------
     const apexSeries = useMemo(() => {
         return valueFields.map(vf => ({ name: vf.name, data: rows.map(r => Number(r[vf.field] ?? 0)) }));
     }, [valueFields, rows]);
@@ -187,12 +151,12 @@ export default function ColumnChart({ title, data, categoryField, valueFields, s
                         if (!row) return;
                         const cat = String(row.category ?? "");
                         const sIndex = config.seriesIndex ?? 0;
-                        const f = valueFields[sIndex];
-                        const val = Number(row[f?.field ?? "count"] ?? 0);
+                        const field = valueFields[sIndex];
+                        const val = Number(row[field?.field ?? "count"] ?? 0);
                         if (drillDown && level !== "day") {
                             handleCategoryDrilldown(cat);
                         } else if (onBarClick) {
-                            onBarClick(cat, f?.field, val);
+                            onBarClick(cat, field?.field, val);
                         }
                     }
                 }
@@ -211,81 +175,26 @@ export default function ColumnChart({ title, data, categoryField, valueFields, s
         <Box sx={{ width: "100%" }}>
             {drillDown && (
                 <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1, mb: 1.5 }}>
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700, flex: 1, color: "text.secondary" }}>
-                        {chartTitle}
-                    </Typography>
-
-                    <ToggleButtonGroup
-                        size="small"
-                        exclusive
-                        value={level}
-                        onChange={(_, nextLevel: TrendLevel | null) => {
-                            if (nextLevel) {
-                                setLevel(nextLevel);
-                                onTrendLevelChange?.(trendLevelMap[nextLevel]);
-                            }
-                        }}
-                    >
-                        <ToggleButton value="year" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>
-                            Yearly
-                        </ToggleButton>
-                        <ToggleButton value="month" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>
-                            Monthly
-                        </ToggleButton>
-                        <ToggleButton value="week" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>
-                            Weekly
-                        </ToggleButton>
-                        <ToggleButton value="day" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>
-                            Daily
-                        </ToggleButton>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, flex: 1, color: "text.secondary" }}>{chartTitle}</Typography>
+                    <ToggleButtonGroup size="small" exclusive value={level} onChange={(_, nextLevel: TrendLevel | null) => {
+                        if (nextLevel) {
+                            setLevel(nextLevel);
+                            onTrendLevelChange?.(trendLevelMap[nextLevel]);
+                        }
+                    }}>
+                        <ToggleButton value="year" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>Yearly</ToggleButton>
+                        <ToggleButton value="month" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>Monthly</ToggleButton>
+                        <ToggleButton value="week" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>Weekly</ToggleButton>
+                        <ToggleButton value="day" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>Daily</ToggleButton>
                     </ToggleButtonGroup>
-
                     {level !== "year" && (
-                        <FormControl size="small" sx={{ minWidth: 90 }}>
-                            <InputLabel sx={{ fontSize: "0.8rem" }}>Year</InputLabel>
-                            <Select
-                                value={selectedYear}
-                                label="Year"
-                                sx={{ fontSize: "0.8rem" }}
-                                onChange={event => setYear(Number(event.target.value))}
-                            >
-                                {availableYears.map(item => (
-                                    <MenuItem key={item} value={item} sx={{ fontSize: "0.8rem" }}>
-                                        {item}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    )}
-
-                    {(level === "week" || level === "day") && (
-                        <FormControl size="small" sx={{ minWidth: 110 }}>
-                            <InputLabel sx={{ fontSize: "0.8rem" }}>Month</InputLabel>
-                            <Select
-                                value={month}
-                                label="Month"
-                                sx={{ fontSize: "0.8rem" }}
-                                onChange={event => setMonth(Number(event.target.value))}
-                            >
-                                {Array.from({ length: 12 }, (_, index) => index + 1).map(item => (
-                                    <MenuItem key={item} value={item} sx={{ fontSize: "0.8rem" }}>
-                                        {new Date(2000, item - 1).toLocaleString("en", { month: "short" })}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-                    )}
-
-                    {level !== "year" && (
-                        <Button size="small" variant="outlined" onClick={goBack} sx={{ textTransform: "none", py: 0.25, fontSize: "0.75rem" }} >
-                            Back
-                        </Button>
+                        <Button size="small" variant="outlined" onClick={goBack} sx={{ textTransform: "none", py: 0.25, fontSize: "0.75rem" }}>Back</Button>
                     )}
                 </Box>
             )}
 
             {!rows.length ? (
-                <Typography color="text.secondary" sx={{ textAlign: "center", py: 5 }}> No chart data available. </Typography>
+                <Typography color="text.secondary" sx={{ textAlign: "center", py: 5 }}>No chart data available.</Typography>
             ) : engine === "amcharts" ? (
                 <div ref={am5Ref} style={{ width: "100%", height }} />
             ) : engine === "recharts" ? (
@@ -295,33 +204,21 @@ export default function ColumnChart({ title, data, categoryField, valueFields, s
                         <XAxis dataKey="category" angle={-35} textAnchor="end" interval={0} tick={{ fontSize: 11, fill: "#64748b" }} />
                         <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "#64748b" }} />
                         <RechartsTooltip contentStyle={{ backgroundColor: "#ffffff", borderRadius: "8px", border: "1px solid #e2e8f0", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", fontSize: "12px" }} />
-                        {valueFields.length > 1 && (<RechartsLegend wrapperStyle={{ paddingTop: 8 }} />)}
+                        {valueFields.length > 1 && <RechartsLegend wrapperStyle={{ paddingTop: 8 }} />}
                         {valueFields.map((field, idx) => {
                             const barColor = toHexColor(field.color, ["#1976d2", "#2e7d32", "#d32f2f", "#f9a825"][idx % 4]);
-
                             return (
-                                <Bar
-                                    key={field.field}
-                                    dataKey={field.field}
-                                    name={field.name}
-                                    fill={barColor}
-                                    stackId={stacked ? "stack" : undefined}
-                                    radius={stacked ? [0, 0, 0, 0] : [4, 4, 0, 0]}
-                                    cursor={(drillDown || onBarClick) ? "pointer" : "default"}
-                                    onClick={(entry: unknown) => {
-                                        const row = entry as ChartRow | undefined;
-                                        if (!row) return;
-
-                                        const cat = String(row.category ?? "");
-                                        const val = Number(row[field.field] ?? 0);
-
-                                        if (drillDown && level !== "day") {
-                                            handleCategoryDrilldown(cat);
-                                        } else if (onBarClick) {
-                                            onBarClick(cat, field.field, val);
-                                        }
-                                    }}
-                                />
+                                <Bar key={field.field} dataKey={field.field} name={field.name} fill={barColor} stackId={stacked ? "stack" : undefined} radius={stacked ? [0, 0, 0, 0] : [4, 4, 0, 0]} cursor={(drillDown || onBarClick) ? "pointer" : "default"} onClick={(entry: unknown) => {
+                                    const row = entry as ChartRow | undefined;
+                                    if (!row) return;
+                                    const cat = String(row.category ?? "");
+                                    const val = Number(row[field.field] ?? 0);
+                                    if (drillDown && level !== "day") {
+                                        handleCategoryDrilldown(cat);
+                                    } else if (onBarClick) {
+                                        onBarClick(cat, field.field, val);
+                                    }
+                                }} />
                             );
                         })}
                     </BarChart>

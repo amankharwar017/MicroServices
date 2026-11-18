@@ -57,8 +57,11 @@ export const getShiftDropdownOptions = async () => {
 };
 
 export const getCreationTrends = async (level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY", dateFrom?: string, dateTo?: string) => {
+  const params: Record<string, string> = { level };
+  if (dateFrom) params.createdDateFrom = dateFrom;
+  if (dateTo) params.createdDateTo = dateTo;
   return await axiosInstance.get("/shift/creation-trends", {
-    params: { level, createdDateFrom: dateFrom, createdDateTo: dateTo },
+    params,
   });
 };
 

@@ -31,6 +31,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -74,7 +75,7 @@ public class ShiftService {
             return response;
         }).toList();
         boolean hasUpdate = requests.stream().anyMatch(request -> request.getId() != null);
-        String operation = requests.size() == 1 && hasUpdate && !savedShifts.get(0).isStatus() ? "UPDATE" : requests.size() == 1 && hasUpdate && savedShifts.get(0).isStatus() ? "REACTIVATED" : "UPDATE";
+        String operation = requests.size() == 1 && hasUpdate && !savedShifts.get(0).isStatus() ? "UPDATE" : requests.size() == 1 && hasUpdate && savedShifts.getFirst().isStatus() ? "REACTIVATED" : "UPDATE";
         if (requests.size() == 1 && hasUpdate) {
             return ResponseEntity.ok(new ApiResponseDto(HttpStatus.OK.value(), "REACTIVATED".equals(operation) ? "Shift reactivated successfully" : "Shift updated successfully"));
         }
@@ -124,10 +125,10 @@ public class ShiftService {
     }
 
 
-    public List<Map<String, Object>> getCreationTrends(String level) {
+    public List<Map<String, Object>> getCreationTrends(String level, LocalDate dateFrom, LocalDate dateTo) {
         List<Object[]> results;
         switch (level.toUpperCase()) {
-            case "YEARLY": results = shiftRepository.getYearlyCreationTrends();
+            case "YEARLY": results = shiftRepository.getYearlyCreationTrends(dateFrom, dateTo);
             return results.stream().map(row -> {
                     Map<String, Object> data = new HashMap<>();
                     data.put("month", String.valueOf(row[0]));
@@ -135,7 +136,7 @@ public class ShiftService {
                     return data;
                 }).toList();
 
-            case "MONTHLY": results = shiftRepository.getMonthlyCreationTrends();
+            case "MONTHLY": results = shiftRepository.getMonthlyCreationTrends(dateFrom, dateTo);
             return results.stream().map(row -> {
                     Map<String, Object> data = new HashMap<>();
                     int year = ((Number) row[0]).intValue();
@@ -145,7 +146,7 @@ public class ShiftService {
                     return data;
                 }).toList();
 
-            case "WEEKLY": results = shiftRepository.getWeeklyCreationTrends();
+            case "WEEKLY": results = shiftRepository.getWeeklyCreationTrends(dateFrom, dateTo);
                 return results.stream().map(row -> {
                     Map<String, Object> data = new HashMap<>();
                     int year = ((Number) row[0]).intValue();
@@ -155,7 +156,7 @@ public class ShiftService {
                     return data;
                 }).toList();
 
-            case "DAILY": results = shiftRepository.getDailyCreationTrends();
+            case "DAILY": results = shiftRepository.getDailyCreationTrends(dateFrom, dateTo);
                 return results.stream().map(row -> {Map<String, Object> data = new HashMap<>();
                     data.put("month", row[0].toString());
                     data.put("count", ((Number) row[1]).longValue());

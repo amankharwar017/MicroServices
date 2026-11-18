@@ -1,4 +1,3 @@
-
 package com.shiftmaster.service;
 
 import com.shiftmaster.client.UserServiceClient;

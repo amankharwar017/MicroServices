@@ -4,8 +4,10 @@ import com.shiftmaster.entity.Shift;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -18,37 +20,45 @@ public interface ShiftRepository extends JpaRepository<Shift, Long>, JpaSpecific
     @Query(value = """
             SELECT YEAR(created_at) AS year, COUNT(*) AS count
             FROM shift
+            WHERE (:dateFrom IS NULL OR created_at >= :dateFrom)
+              AND (:dateTo IS NULL OR created_at < DATE_ADD(:dateTo, INTERVAL 1 DAY))
             GROUP BY YEAR(created_at)
             ORDER BY YEAR(created_at)
             """, nativeQuery = true)
-    List<Object[]> getYearlyCreationTrends();
+    List<Object[]> getYearlyCreationTrends(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 
     @Query(value = """
             SELECT YEAR(created_at) AS year,
                    MONTH(created_at) AS month,
                    COUNT(*) AS count
             FROM shift
+            WHERE (:dateFrom IS NULL OR created_at >= :dateFrom)
+              AND (:dateTo IS NULL OR created_at < DATE_ADD(:dateTo, INTERVAL 1 DAY))
             GROUP BY YEAR(created_at), MONTH(created_at)
             ORDER BY YEAR(created_at), MONTH(created_at)
             """, nativeQuery = true)
-    List<Object[]> getMonthlyCreationTrends();
+    List<Object[]> getMonthlyCreationTrends(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 
     @Query(value = """
             SELECT YEAR(created_at) AS year,
                    WEEK(created_at, 1) AS week,
                    COUNT(*) AS count
             FROM shift
+            WHERE (:dateFrom IS NULL OR created_at >= :dateFrom)
+              AND (:dateTo IS NULL OR created_at < DATE_ADD(:dateTo, INTERVAL 1 DAY))
             GROUP BY YEAR(created_at), WEEK(created_at, 1)
             ORDER BY YEAR(created_at), WEEK(created_at, 1)
             """, nativeQuery = true)
-    List<Object[]> getWeeklyCreationTrends();
+    List<Object[]> getWeeklyCreationTrends(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 
     @Query(value = """
             SELECT DATE(created_at) AS date,
                    COUNT(*) AS count
             FROM shift
+            WHERE (:dateFrom IS NULL OR created_at >= :dateFrom)
+              AND (:dateTo IS NULL OR created_at < DATE_ADD(:dateTo, INTERVAL 1 DAY))
             GROUP BY DATE(created_at)
             ORDER BY DATE(created_at)
             """, nativeQuery = true)
-    List<Object[]> getDailyCreationTrends();
+    List<Object[]> getDailyCreationTrends(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 }

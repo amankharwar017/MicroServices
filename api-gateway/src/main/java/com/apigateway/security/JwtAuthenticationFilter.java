@@ -1,6 +1,7 @@
 package com.apigateway.security;
 
 import io.jsonwebtoken.JwtException;
+import org.jspecify.annotations.NonNull;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -19,7 +20,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+    public Mono<Void> filter(ServerWebExchange exchange, @NonNull GatewayFilterChain chain) {
 
         String path = exchange.getRequest().getURI().getPath();
 
@@ -51,8 +52,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                         headers.set("X-Username", username);
                         headers.set("X-Role", role);
                         headers.set("X-User-Id", String.valueOf(userId));
-                    }))
-                    .build();
+                    })).build();
 
             return chain.filter(modifiedExchange);
 

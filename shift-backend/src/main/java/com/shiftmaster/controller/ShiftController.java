@@ -16,6 +16,7 @@ import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
 
 
 @RequiredArgsConstructor
@@ -98,8 +100,11 @@ public class ShiftController {
 
 
     @GetMapping("creation-trends")
-    public ResponseEntity<List<Map<String, Object>>> getCreationTrends(@RequestParam String level) {
-        return ResponseEntity.ok(shiftService.getCreationTrends(level));
+    public ResponseEntity<List<Map<String, Object>>> getCreationTrends(
+            @RequestParam String level,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateTo) {
+        return ResponseEntity.ok(shiftService.getCreationTrends(level, createdDateFrom, createdDateTo));
     }
 
 
