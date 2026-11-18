@@ -75,15 +75,30 @@ export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, s
         try {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Shift Master");
+            const mandatoryHeaders = new Set<string>(["shiftCode", "shiftName", "shiftType", "startTime", "endTime"]);
             const headers = shiftResponseHeaders.filter(header => header !== "id" && shifts.some(shift => header in shift));
+
+            worksheet.addRow(headers.map(header => mandatoryHeaders.has(header) ? "MANDATORY" : "OPTIONAL"));
             worksheet.addRow(headers);
+
             shifts.forEach(shift => {
                 worksheet.addRow(headers.map(header => {
                     const value = shift[header as keyof ShiftResponse];
                     return Array.isArray(value) ? value.join(", ") : value ?? "";
                 }));
             });
-            const headerRow = worksheet.getRow(1);
+
+            const mandatoryRow = worksheet.getRow(1);
+            mandatoryRow.height = 24;
+            mandatoryRow.eachCell((cell, colNumber) => {
+                const header = headers[colNumber - 1];
+                const isMandatory = mandatoryHeaders.has(header);
+                cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFE5E5" } };
+                cell.font = { bold: true, color: { argb: isMandatory ? "FFFF0000" : "FF1565C0" }, size: 10 };
+                cell.alignment = { horizontal: "center", vertical: "middle" };
+            });
+
+            const headerRow = worksheet.getRow(2);
             headerRow.height = 28;
             headerRow.eachCell(cell => {
                 cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF000000" } };
@@ -91,10 +106,13 @@ export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, s
                 cell.alignment = { horizontal: "center", vertical: "middle" };
                 cell.border = { bottom: { style: "thin", color: { argb: "FF808080" } } };
             });
+
             headers.forEach((header, index) => {
-                worksheet.getColumn(index + 1).width = Math.max(header.length + 4, 16);
+                worksheet.getColumn(index + 1).width = Math.max(header.length + 4, 15);
             });
-            worksheet.views = [{ state: "frozen", ySplit: 1 }];
+
+            worksheet.views = [{ state: "frozen", ySplit: 2 }];
+
             const buffer = await workbook.xlsx.writeBuffer();
             const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
             const url = window.URL.createObjectURL(blob);

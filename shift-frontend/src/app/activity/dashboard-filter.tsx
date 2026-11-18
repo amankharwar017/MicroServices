@@ -96,7 +96,7 @@ export default function DashboardFilterBar({
                     <Typography variant="caption" color="text.secondary">Filter the dashboard and recalculate all cards, charts and tables.</Typography>
                 </Box>
             </Box>
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))", lg: "repeat(5, minmax(0, 1fr))" }, gap: 2 }}>
+            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))", lg: "repeat(5, minmax(0, 1fr))" }, gap: 2, "& .MuiInputLabel-root": { fontWeight: 700, color: "#17324d" } }}>
                 <TextField
                     size="small"
                     type="date"
@@ -152,17 +152,14 @@ export default function DashboardFilterBar({
                 <Button size="small" variant="contained" onClick={onApply} sx={{ textTransform: "none", bgcolor: "#17324d", "&:hover": { bgcolor: "#0f2032" } }}>Apply Filters</Button>
             </Box>
             {chips.length > 0 ? (
-                <Box sx={{ mt: 2, display: "flex", gap: 0.75, flexWrap: "wrap", alignItems: "center" }}>
-                    <Typography variant="caption" sx={{ fontWeight: 800, color: "text.secondary" }}>Applied Filters:</Typography>
-                    {chips.map((chip, index) => (
-                        <Chip
-                            key={`${chip.type}-${chip.value ?? index}`}
-                            size="small"
-                            label={chip.label}
-                            onDelete={() => removeFilter(chip.type, chip.value)}
-                        />
-                    ))}
-                </Box>
+                <Paper elevation={0} sx={{ mt: 2, p: 1.5, border: "1px solid #e2e8f0", borderRadius: 3, bgcolor: "#fff" }}>
+                    <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", alignItems: "center" }}>
+                        <Typography variant="caption" sx={{ fontWeight: 800, color: "#17324d" }}>Applied Filters:</Typography>
+                        {chips.map((chip, index) => (
+                            <Chip key={`${chip.type}-${chip.value ?? index}`} size="small" label={chip.label} onDelete={() => removeFilter(chip.type, chip.value)} />
+                        ))}
+                    </Box>
+                </Paper>
             ) : null}
         </Paper>
     );

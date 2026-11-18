@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { ChangeEvent, MouseEvent } from "react";
 import type { GridSortModel } from "@mui/x-data-grid";
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Drawer, IconButton, Tooltip, Typography, Menu, MenuItem } from "@mui/material";
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Drawer, IconButton, Tooltip, Typography, Menu, MenuItem ,Paper } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -528,10 +528,10 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
                 <Box className="dashboard-content">
                     {activePage === "dashboard" ? (
                         <>
-                            <Box sx={{ mb: 2 }}>
-                                <Typography component="h1" variant="h5" sx={{ fontWeight: 700 }}>Shift Master</Typography>
-                                <Typography component="p" variant="body2" color="text.secondary">Manage shift details, operational status and records</Typography>
-                            </Box>
+                            <Paper elevation={0} sx={{ p: 2, mb: 2, border: "1px solid #e2e8f0", borderRadius: 3, backgroundColor: "#fff" }}>
+                                <Typography variant="h5" sx={{ fontWeight: 800 }}>Shift Master</Typography>
+                                <Typography variant="body2" color="text.secondary">Manage shift details, operational status and records</Typography>
+                            </Paper>
                             <ShiftSearchForm onSearch={handleSearch} totalRows={totalRows} refreshSummaryCounts={summaryCountsRefresh} summaryCountsUpdate={summaryCountsUpdate} />
                             <Box className="shift-table-card" sx={{ width: "100%", maxWidth: "100%", overflow: "hidden" }}>
                                 <Box className="shift-table-card-content">
