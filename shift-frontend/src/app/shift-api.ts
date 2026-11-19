@@ -50,10 +50,10 @@ export const markNotificationAsRead = async (notificationId: number) => {
 export const markAllNotificationsAsRead = async () => {
     return await axiosInstance.patch("/shift/notifications/read-all");
 };
-let dropdownOptionsCache: Promise<ShiftDropdownOptionsResponse> | null = null;
 export const getShiftDropdownOptions = async () => {
-  if (!dropdownOptionsCache) dropdownOptionsCache = axiosInstance.get<ShiftDropdownOptionsResponse>("/shift/dropdown-options").then((response) => response.data).catch((error) => { dropdownOptionsCache = null; throw error; });
-  return { data: await dropdownOptionsCache };
+    return await axiosInstance.get<ShiftDropdownOptionsResponse>(
+        "/shift/dropdown-options"
+    );
 };
 
 export const getCreationTrends = async (level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY", dateFrom?: string, dateTo?: string) => {

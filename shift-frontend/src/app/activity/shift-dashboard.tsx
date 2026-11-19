@@ -10,9 +10,12 @@ import DashboardChartCard from "../../components/DashboardChartCard";
 import DashboardStatTiles from "../../components/DashboardStatTiles";
 import ShiftDrilldownDialog from "../../components/ShiftDrilldownDialog";
 import DashboardFilterBar from "./dashboard-filter";
-import { getShiftDropdownOptions, getShiftList, searchShifts, getCreationTrends } from "../shift-api";
+import { getShiftList, searchShifts, getCreationTrends } from "../shift-api";
 import type { ShiftDropdownOptionsResponse, ShiftResponse } from "../../types/shift";
 import type { ChartEngine, TableBreakdownRow, DrilldownPayload, ShiftAnalytics } from "../../types/chartTypes";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch } from "../../redux/store";
+import { fetchShiftDropdownOptions, selectFreshDropdownOptions, } from "../../redux/cacheSlice";
 import type { ShiftDashboardFilters } from "./dashboard-filter";
 import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
@@ -36,7 +39,8 @@ export default function ShiftDashboard() {
     const [failed, setFailed] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [summaryCounts, setSummaryCounts] = useState<{ total: number; active: number; inactive: number; night: number; } | null>(null);
-    const [dropdownOptions, setDropdownOptions] = useState<ShiftDropdownOptionsResponse | null>(null);
+    const dispatch = useDispatch<AppDispatch>();
+    const dropdownOptions = useSelector(selectFreshDropdownOptions);
     const [filters, setFilters] = useState<ShiftDashboardFilters>(defaultFilters);
     const [appliedFilters, setAppliedFilters] = useState<ShiftDashboardFilters>(defaultFilters);
     const [trendLevel, setTrendLevel] = useState<"YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY">("YEARLY");
@@ -46,16 +50,8 @@ export default function ShiftDashboard() {
     const abortControllerRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
-        const loadDropdownOptions = async () => {
-            try {
-                const res = await getShiftDropdownOptions();
-                setDropdownOptions(res.data);
-            } catch (err) {
-                console.log("Failed to fetch shift dropdown options:", err);
-            }
-        };
-        loadDropdownOptions();
-    }, []);
+        void dispatch(fetchShiftDropdownOptions());
+    }, [dispatch]);
 
     const fetchCreationTrends = async (level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY", dateFrom = appliedFilters.createdDateFrom, dateTo = appliedFilters.createdDateTo) => {
         const response = await getCreationTrends(level, dateFrom, dateTo);
@@ -224,7 +220,7 @@ export default function ShiftDashboard() {
         setAppliedFilters(def);
         setDrilldown(null);
         setDrilldownOpen(false);
-        getShiftDropdownOptions().then(res => setDropdownOptions(res.data)).catch(() => { });
+        void dispatch(fetchShiftDropdownOptions());
         void loadInitialDashboard(def);
     };
 

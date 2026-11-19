@@ -46,14 +46,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
                 return exchange.getResponse().setComplete();
             }
-
-            ServerWebExchange modifiedExchange = exchange.mutate()
-                    .request(request -> request.headers(headers -> {
+            ServerWebExchange modifiedExchange = exchange.mutate().request(request -> request.headers(headers -> {
                         headers.set("X-Username", username);
                         headers.set("X-Role", role);
                         headers.set("X-User-Id", String.valueOf(userId));
                     })).build();
-
             return chain.filter(modifiedExchange);
 
         } catch (JwtException | IllegalArgumentException exception) {

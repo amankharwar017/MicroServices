@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { ChangeEvent, MouseEvent } from "react";
 import type { GridSortModel } from "@mui/x-data-grid";
-import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Drawer, IconButton, Tooltip, Typography, Menu, MenuItem ,Paper } from "@mui/material";
+import { Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Drawer, IconButton, Tooltip, Typography, Menu, MenuItem, Paper } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -566,12 +566,23 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
                                         recordCount={totalRows}
                                         countText={`Total: ${totalRows}`}
                                         emptyMessage="No shifts found"
-                                        enableRowActions={role === "ADMIN"}
+                                        enableRowActions
                                         renderRowActions={(shift) => (
                                             <Box className="shift-table-actions" sx={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 0.5 }}>
-                                                {role === "ADMIN" && shift.status && !shift.isDeleted && <Tooltip title="Delete"><IconButton size="small" className="shift-delete-button" onClick={() => handleDelete(shift)}><DeleteIcon fontSize="small" /></IconButton></Tooltip>}
-                                                {role === "ADMIN" && <Tooltip title="Edit"><IconButton size="small" className="shift-edit-button" onClick={() => handleEdit(shift.id)}><EditIcon fontSize="small" /></IconButton></Tooltip>}
-                                                <Tooltip title="View"><IconButton size="small" className="shift-view-button" onClick={() => handleViewHistory(shift.id)}><VisibilityIcon fontSize="small" /></IconButton></Tooltip>
+                                                {role === "ADMIN" && (
+                                                    <>
+                                                        {shift.status && !shift.isDeleted && ( <Tooltip title="Delete">
+                                                                <IconButton size="small" className="shift-delete-button" onClick={() => handleDelete(shift)}> <DeleteIcon fontSize="small" /> </IconButton>
+                                                                 </Tooltip>
+                                                        )}
+                                                        <Tooltip title="Edit">
+                                                            <IconButton size="small" className="shift-edit-button" onClick={() => handleEdit(shift.id)}> <EditIcon fontSize="small" /> </IconButton>
+                                                        </Tooltip>
+                                                    </>
+                                                )}
+                                                <Tooltip title="View">
+                                                    <IconButton size="small" className="shift-view-button" onClick={() => handleViewHistory(shift.id)}> <VisibilityIcon fontSize="small" /> </IconButton>
+                                                </Tooltip>
                                             </Box>
                                         )}
                                         maxHeight="60vh"

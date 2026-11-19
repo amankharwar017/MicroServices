@@ -14,8 +14,10 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { type Dayjs } from "dayjs";
-import { searchShifts, getShiftDropdownOptions } from "../shift-api";
-import type { DropdownOptionResponse } from "../../types/shift";
+import { searchShifts } from "../shift-api";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch } from "../../redux/store";
+import { fetchShiftDropdownOptions, selectFreshDropdownOptions, } from "../../redux/cacheSlice";
 
 interface ShiftSearchFormProps {
   totalRows: number;
@@ -37,9 +39,6 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
   const [inactiveShifts, setInactiveShifts] = useState(0);
   const [nightShifts, setNightShifts] = useState(0);
   const [summaryMode, setSummaryMode] = useState<"beginning" | "date">("beginning");
-  const [shiftTypeOptions, setShiftTypeOptions] = useState<string[]>([]);
-  const [nightShiftOptions, setNightShiftOptions] = useState<{ label: string; value: string }[]>([]);
-  const [statusOptions, setStatusOptions] = useState<{ label: string; value: string }[]>([]);
 
   useEffect(() => {
     if (!summaryCountsUpdate || summaryCountsUpdate.version === 0) return;
@@ -49,29 +48,31 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
     setTotalShifts(count => Math.max(0, count + summaryCountsUpdate.activeDelta + summaryCountsUpdate.inactiveDelta));
   }, [summaryCountsUpdate?.version]);
 
+  const dispatch = useDispatch<AppDispatch>();
   useEffect(() => {
-    const fetchDropdownOptions = async () => {
-      try {
-        const response = await getShiftDropdownOptions();
-        const data = response.data;
-        setShiftTypeOptions((data?.shiftTypes ?? [])
-          .map((option: DropdownOptionResponse) => option.name)
-          .filter((name: string) => name.toLowerCase() !== "all")
-        );
-        setNightShiftOptions(data.nightShiftOptions.map((option: DropdownOptionResponse) => ({
-          label: option.name,
-          value: option.name.toLowerCase() === "yes" ? "true" : option.name.toLowerCase() === "no" ? "false" : "all"
-        })));
-        setStatusOptions(data.statusOptions.map((option: DropdownOptionResponse) => ({
-          label: option.name,
-          value: option.name.toLowerCase() === "active" ? "true" : option.name.toLowerCase() === "inactive" ? "false" : "all"
-        })));
-      } catch (error) {
-        console.error("Failed to fetch search dropdown options:", error);
-      }
-    };
-    void fetchDropdownOptions();
-  }, []);
+    void dispatch(fetchShiftDropdownOptions());
+  }, [dispatch]);
+
+
+  const dropdownOptions = useSelector(selectFreshDropdownOptions);
+
+  const shiftTypeOptions = (dropdownOptions?.shiftTypes ?? [])
+    .map(option => option.name)
+    .filter(name => name.toLowerCase() !== "all");
+
+  const nightShiftOptions = (dropdownOptions?.nightShiftOptions ?? []).map(
+    option => ({
+      label: option.name,
+      value: option.name.toLowerCase() === "yes" ? "true" : option.name.toLowerCase() === "no" ? "false" : "all",
+    })
+  );
+
+  const statusOptions = (dropdownOptions?.statusOptions ?? []).map(
+    option => ({
+      label: option.name,
+      value: option.name.toLowerCase() === "active"? "true": option.name.toLowerCase() === "inactive" ? "false" : "all",
+    })
+  );
   const getDate = (daysAgo = 0) => {
     const date = new Date();
     date.setDate(date.getDate() - daysAgo);
@@ -363,12 +364,12 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
             </CardContent>
           </Card>
           <Box sx={{ minWidth: 0 }}>
-            
-              <Box sx={{ display: "flex", gap: 3, mb: 1, borderBottom: "1px solid #e2e8f0" }}>
-                <Button onClick={() => handleSummaryModeChange("beginning")} sx={{ borderRadius: 0, textTransform: "none", fontWeight: summaryMode === "beginning" ? 700 : 500, color: summaryMode === "beginning" ? "#0f172a" : "#64748b", borderBottom: summaryMode === "beginning" ? "2px solid #1976d2" : "2px solid transparent" }}>Since Beginning</Button>
-                <Button onClick={() => handleSummaryModeChange("date")} sx={{ borderRadius: 0, textTransform: "none", fontWeight: summaryMode === "date" ? 700 : 500, color: summaryMode === "date" ? "#0f172a" : "#64748b", borderBottom: summaryMode === "date" ? "2px solid #1976d2" : "2px solid transparent" }}>By Chosen Date</Button>
-              </Box>
-           
+
+            <Box sx={{ display: "flex", gap: 3, mb: 1, borderBottom: "1px solid #e2e8f0" }}>
+              <Button onClick={() => handleSummaryModeChange("beginning")} sx={{ borderRadius: 0, textTransform: "none", fontWeight: summaryMode === "beginning" ? 700 : 500, color: summaryMode === "beginning" ? "#0f172a" : "#64748b", borderBottom: summaryMode === "beginning" ? "2px solid #1976d2" : "2px solid transparent" }}>Since Beginning</Button>
+              <Button onClick={() => handleSummaryModeChange("date")} sx={{ borderRadius: 0, textTransform: "none", fontWeight: summaryMode === "date" ? 700 : 500, color: summaryMode === "date" ? "#0f172a" : "#64748b", borderBottom: summaryMode === "date" ? "2px solid #1976d2" : "2px solid transparent" }}>By Chosen Date</Button>
+            </Box>
+
             <Grid container spacing={1} sx={{ marginBottom: 1 }}>
               {[
                 { title: "Total Shifts", value: totalShifts, icon: <AccessTimeIcon />, className: "summary-total", filter: "all" as const },
