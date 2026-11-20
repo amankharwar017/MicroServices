@@ -127,17 +127,19 @@ public class ShiftService {
 
     public List<Map<String, Object>> getCreationTrends(String level, LocalDate dateFrom, LocalDate dateTo) {
         List<Object[]> results;
-        switch (level.toUpperCase()) {
-            case "YEARLY": results = shiftRepository.getYearlyCreationTrends(dateFrom, dateTo);
-            return results.stream().map(row -> {
+        return switch (level.toUpperCase()) {
+            case "YEARLY" -> {
+                results = shiftRepository.getYearlyCreationTrends(dateFrom, dateTo);
+                yield results.stream().map(row -> {
                     Map<String, Object> data = new HashMap<>();
                     data.put("month", String.valueOf(row[0]));
                     data.put("count", ((Number) row[1]).longValue());
                     return data;
                 }).toList();
-
-            case "MONTHLY": results = shiftRepository.getMonthlyCreationTrends(dateFrom, dateTo);
-            return results.stream().map(row -> {
+            }
+            case "MONTHLY" -> {
+                results = shiftRepository.getMonthlyCreationTrends(dateFrom, dateTo);
+                yield results.stream().map(row -> {
                     Map<String, Object> data = new HashMap<>();
                     int year = ((Number) row[0]).intValue();
                     int month = ((Number) row[1]).intValue();
@@ -145,9 +147,10 @@ public class ShiftService {
                     data.put("count", ((Number) row[2]).longValue());
                     return data;
                 }).toList();
-
-            case "WEEKLY": results = shiftRepository.getWeeklyCreationTrends(dateFrom, dateTo);
-                return results.stream().map(row -> {
+            }
+            case "WEEKLY" -> {
+                results = shiftRepository.getWeeklyCreationTrends(dateFrom, dateTo);
+                yield results.stream().map(row -> {
                     Map<String, Object> data = new HashMap<>();
                     int year = ((Number) row[0]).intValue();
                     int week = ((Number) row[1]).intValue();
@@ -155,30 +158,30 @@ public class ShiftService {
                     data.put("count", ((Number) row[2]).longValue());
                     return data;
                 }).toList();
-
-            case "DAILY": results = shiftRepository.getDailyCreationTrends(dateFrom, dateTo);
-                return results.stream().map(row -> {Map<String, Object> data = new HashMap<>();
+            }
+            case "DAILY" -> {
+                results = shiftRepository.getDailyCreationTrends(dateFrom, dateTo);
+                yield results.stream().map(row -> {
+                    Map<String, Object> data = new HashMap<>();
                     data.put("month", row[0].toString());
                     data.put("count", ((Number) row[1]).longValue());
                     return data;
                 }).toList();
-
-            default: throw new IllegalArgumentException("Invalid trend level. Use YEARLY, MONTHLY, WEEKLY or DAILY");
-        }
+            }
+            default -> throw new IllegalArgumentException("Invalid trend level. Use YEARLY, MONTHLY, WEEKLY or DAILY");
+        };
     }
 
 
 
     public List<String> validateSingleShift(Map<String, Object> row) {
         Set<String> errors = new LinkedHashSet<>();
-
         if (row == null) {
             errors.add("Record: Record is required");
             return new ArrayList<>(errors);
         }
         String shiftCode = row.get("shiftCode") == null ? "" : String.valueOf(row.get("shiftCode")).trim();
         String shiftName = row.get("shiftName") == null ? "" : String.valueOf(row.get("shiftName")).trim();
-
         if (!shiftCode.isEmpty() || !shiftName.isEmpty()) {
             List<Shift> existingShifts = shiftRepository.findByShiftCodeOrShiftName(shiftCode.isEmpty() ? null : shiftCode, shiftName.isEmpty() ? null : shiftName);
             for (Shift existing : existingShifts) {
@@ -190,7 +193,6 @@ public class ShiftService {
                 }
             }
         }
-
         try {
             ShiftRequestDto request = objectMapper.convertValue(row, ShiftRequestDto.class);
             Set<ConstraintViolation<ShiftRequestDto>> violations = beanValidator.validate(request);

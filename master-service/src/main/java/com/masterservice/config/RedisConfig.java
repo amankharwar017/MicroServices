@@ -19,18 +19,8 @@ public class RedisConfig {
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
 
-        RedisCacheConfiguration configuration =
-                RedisCacheConfiguration.defaultCacheConfig()
-                        .entryTtl(Duration.ofMinutes(10))
-                        .serializeValuesWith(
-                                RedisSerializationContext.SerializationPair.fromSerializer(
-                                        new JdkSerializationRedisSerializer()
-                                )
-                        );
+        RedisCacheConfiguration configuration = RedisCacheConfiguration.defaultCacheConfig().entryTtl(Duration.ofMinutes(10)).serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new JdkSerializationRedisSerializer()));
 
-        return RedisCacheManager.builder(connectionFactory)
-                .cacheDefaults(configuration)
-                .transactionAware()
-                .build();
+        return RedisCacheManager.builder(connectionFactory).cacheDefaults(configuration).transactionAware().build();
     }
 }

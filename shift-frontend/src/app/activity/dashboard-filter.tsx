@@ -57,7 +57,7 @@ export default function DashboardFilterBar({
     }
 
     const today = dayjs().format("YYYY-MM-DD");
-    const sevenDaysAgo = dayjs().subtract(7, "day").format("YYYY-MM-DD");
+
     const removeFilter = (type: string, value?: string) => {
         if (type === "shiftType") {
             const shiftTypes = appliedFilters.shiftTypes.filter(item => item !== value);
@@ -96,6 +96,7 @@ export default function DashboardFilterBar({
                     <Typography variant="caption" color="text.secondary">Filter the dashboard and recalculate all cards, charts and tables.</Typography>
                 </Box>
             </Box>
+
             <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", md: "repeat(3, minmax(0, 1fr))", lg: "repeat(5, minmax(0, 1fr))" }, gap: 2, "& .MuiInputLabel-root": { fontWeight: 700, color: "#17324d" } }}>
                 <TextField
                     size="small"
@@ -105,19 +106,27 @@ export default function DashboardFilterBar({
                     value={filters.createdDateFrom}
                     onChange={event => {
                         const value = event.target.value;
+                        if (value > today) return;
                         setFilters(prev => ({ ...prev, createdDateFrom: value }));
                     }}
-                    slotProps={{ inputLabel: { shrink: true } }}
+                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today } }}
                 />
+
                 <TextField
                     size="small"
                     type="date"
                     label="Created To"
                     name="createdDateTo"
                     value={filters.createdDateTo}
-                    onChange={event => { const value = event.target.value; setFilters(prev => ({ ...prev, createdDateTo: value })); setAppliedFilters(prev => ({ ...prev, createdDateTo: value })); }}
-                    slotProps={{ inputLabel: { shrink: true } }}
+                    onChange={event => {
+                        const value = event.target.value;
+                        if (value > today) return;
+                        setFilters(prev => ({ ...prev, createdDateTo: value }));
+                        setAppliedFilters(prev => ({ ...prev, createdDateTo: value }));
+                    }}
+                    slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: today } }}
                 />
+
                 <MultiselectAutoComplete
                     label="Shift Type"
                     name="shiftType"
@@ -127,36 +136,56 @@ export default function DashboardFilterBar({
                     onChange={value => {
                         const selected = Array.isArray(value) ? value : [];
                         const allShiftTypes = optionsData?.shiftTypes?.map(item => item.name) ?? [];
-                        setFilters(prev => ({ ...prev, shiftTypes: selected.includes("All") ? selected.length === allShiftTypes.length + 1 ? [] : allShiftTypes : selected }));
+                        setFilters(prev => ({
+                            ...prev,
+                            shiftTypes: selected.includes("All")
+                                ? selected.length === allShiftTypes.length + 1
+                                    ? []
+                                    : allShiftTypes
+                                : selected
+                        }));
                     }}
                 />
+
                 <MultiselectAutoComplete
                     label="Status"
                     name="status"
                     value={filters.status}
                     options={[{ label: "Active", value: "Active" }, { label: "Inactive", value: "Inactive" }]}
                     multiple
-                    onChange={value => { setFilters(prev => ({ ...prev, status: Array.isArray(value) ? value : [] })); }}
+                    onChange={value => {
+                        setFilters(prev => ({ ...prev, status: Array.isArray(value) ? value : [] }));
+                    }}
                 />
+
                 <MultiselectAutoComplete
                     label="Night Shift"
                     name="nightShift"
                     value={filters.nightShift}
                     options={[{ label: "Yes", value: "Yes" }, { label: "No", value: "No" }]}
                     multiple
-                    onChange={value => { setFilters(prev => ({ ...prev, nightShift: Array.isArray(value) ? value : [] })); }}
+                    onChange={value => {
+                        setFilters(prev => ({ ...prev, nightShift: Array.isArray(value) ? value : [] }));
+                    }}
                 />
             </Box>
+
             <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1, mt: 2 }}>
                 <Button size="small" variant="outlined" onClick={onReset} sx={{ textTransform: "none" }}>Reset</Button>
                 <Button size="small" variant="contained" onClick={onApply} sx={{ textTransform: "none", bgcolor: "#17324d", "&:hover": { bgcolor: "#0f2032" } }}>Apply Filters</Button>
             </Box>
+
             {chips.length > 0 ? (
                 <Paper elevation={0} sx={{ mt: 2, p: 1.5, border: "1px solid #e2e8f0", borderRadius: 3, bgcolor: "#fff" }}>
                     <Box sx={{ display: "flex", gap: 0.75, flexWrap: "wrap", alignItems: "center" }}>
                         <Typography variant="caption" sx={{ fontWeight: 800, color: "#17324d" }}>Applied Filters:</Typography>
                         {chips.map((chip, index) => (
-                            <Chip key={`${chip.type}-${chip.value ?? index}`} size="small" label={chip.label} onDelete={() => removeFilter(chip.type, chip.value)} />
+                            <Chip
+                                key={`${chip.type}-${chip.value ?? index}`}
+                                size="small"
+                                label={chip.label}
+                                onDelete={() => removeFilter(chip.type, chip.value)}
+                            />
                         ))}
                     </Box>
                 </Paper>

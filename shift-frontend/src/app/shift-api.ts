@@ -37,9 +37,8 @@ export const getShiftHistory = async (shiftId: number) => {
 export const downloadShiftTemplate = async () => {
   return await axiosInstance.get("/common/shift/template", {  responseType: "blob", });
 };
-export const validateMultipleShifts = async (shifts: unknown[]) => {
-    return await axiosInstance.post("common/shift/validate-multiple", shifts);
-};
+export const validateMultipleShifts = async (rows: unknown[]) =>axiosInstance.post("/common/shift/validate-multiple", rows);
+
 export const getNotificationData = async (page: number = 0, size: number = 10) => {
     const response = await axiosInstance.get("/shift/notifications", {params: { page, size }});
     return response.data;

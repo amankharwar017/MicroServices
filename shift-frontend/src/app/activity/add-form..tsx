@@ -10,7 +10,10 @@ import Attachment from "../../components/Attachment";
 import DeleteIcon from "@mui/icons-material/Delete";
 import IconButton from "@mui/material/IconButton";
 import Tooltip from "@mui/material/Tooltip";
-import { getShiftDropdownOptions, saveMultipleShifts } from "../shift-api";
+import { saveMultipleShifts } from "../shift-api";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch } from "../../redux/store";
+import { fetchShiftDropdownOptions, selectFreshDropdownOptions, } from "../../redux/cacheSlice";
 import type { DropdownOptionResponse } from "../../types/shift";
 import { shiftValidationSchema } from "../shift-validation";
 import type { ShiftFormData } from "../../types/shift";
@@ -44,6 +47,8 @@ export const initialFormData: ShiftFormData = {
 };
 
 function AddShiftForm({ onSuccess, onError, onBack }: AddShiftFormProps) {
+  const dispatch = useDispatch<AppDispatch>();
+  const dropdownOptions = useSelector(selectFreshDropdownOptions);
   const [shifts, setShifts] = useState<ShiftFormData[]>([{ ...initialFormData }]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [selectedFiles, setSelectedFiles] = useState<(File | null)[]>([null]);
@@ -56,31 +61,49 @@ function AddShiftForm({ onSuccess, onError, onBack }: AddShiftFormProps) {
   const [statusOptions, setStatusOptions] = useState<{ label: string; value: string }[]>([]);
 
   useEffect(() => {
-    const fetchDropdownOptions = async () => {
-      try {
-        const response = await getShiftDropdownOptions();
-        const data = response.data;
+    void dispatch(fetchShiftDropdownOptions());
+  }, [dispatch]);
 
-        const mapOptions = (options: DropdownOptionResponse[]) =>
-          options.map((option) => ({
-            label: option.name === "ALL" ? "All" : option.name,
-            value: option.name,
-          }));
+  useEffect(() => {
+    if (!dropdownOptions) return;
 
-        setShiftTypeOptions(mapOptions(data.shiftTypes));
-        setDayOptions(mapOptions(data.applicableDays));
-        setOvertimeOptions(data.overtimeOptions.map((option) => ({ label: option.name, value: option.name.toLowerCase() === "yes" ? "true" : "false", })));
-        setNightShiftOptions(data.nightShiftOptions.map((option) => ({ label: option.name, value: option.name.toLowerCase() === "yes" ? "true" : "false", })));
-        setWeeklyOffOptions(data.weeklyOffOptions.map((option) => ({ label: option.name, value: option.name.toLowerCase() === "yes" ? "true" : "false", })));
-        setStatusOptions(data.statusOptions.map((option) => ({ label: option.name, value: option.name.toLowerCase() === "active" ? "true" : "false", })));
-      } catch (error) {
-        console.error("Failed to fetch shift dropdown options:", error);
-        onError("Failed to load shift dropdown options.");
-      }
-    };
-    void fetchDropdownOptions();
-  }, [onError]);
+    const mapOptions = (options: DropdownOptionResponse[]) =>
+      options.map((option) => ({
+        label: option.name === "ALL" ? "All" : option.name,
+        value: option.name,
+      }));
 
+    setShiftTypeOptions(mapOptions(dropdownOptions.shiftTypes));
+    setDayOptions(mapOptions(dropdownOptions.applicableDays));
+
+    setOvertimeOptions(
+      dropdownOptions.overtimeOptions.map((option) => ({
+        label: option.name,
+        value: option.name.toLowerCase() === "yes" ? "true" : "false",
+      }))
+    );
+
+    setNightShiftOptions(
+      dropdownOptions.nightShiftOptions.map((option) => ({
+        label: option.name,
+        value: option.name.toLowerCase() === "yes" ? "true" : "false",
+      }))
+    );
+
+    setWeeklyOffOptions(
+      dropdownOptions.weeklyOffOptions.map((option) => ({
+        label: option.name,
+        value: option.name.toLowerCase() === "yes" ? "true" : "false",
+      }))
+    );
+
+    setStatusOptions(
+      dropdownOptions.statusOptions.map((option) => ({
+        label: option.name,
+        value: option.name.toLowerCase() === "active" ? "true" : "false",
+      }))
+    );
+  }, [dropdownOptions]);
   const updateField = (index: number, name: keyof ShiftFormData, value: unknown) => {
     setShifts((previous) => previous.map((shift, i) => i === index ? { ...shift, [name]: value } : shift));
     setErrors((previous) => ({ ...previous, [`${index}-${name}`]: "" }));
@@ -230,8 +253,8 @@ function AddShiftForm({ onSuccess, onError, onBack }: AddShiftFormProps) {
                 </Box>
                 <Box className="shift-form-attachment-content">
                   <Attachment key={`${index}-${attachmentKey}`} label="Choose Attachment" accept=".pdf,.doc,.docx" onChange={(file) => handleFileChange(index, file)} />
-                  {selectedFiles[index] && ( <Typography variant="body2" className="shift-form-selected-file">Selected file: {selectedFiles[index]?.name}</Typography>)}
-                  {errors[`${index}-attachment`] && ( <Typography variant="caption" className="shift-form-attachment-error">{errors[`${index}-attachment`]}</Typography>)}
+                  {selectedFiles[index] && (<Typography variant="body2" className="shift-form-selected-file">Selected file: {selectedFiles[index]?.name}</Typography>)}
+                  {errors[`${index}-attachment`] && (<Typography variant="caption" className="shift-form-attachment-error">{errors[`${index}-attachment`]}</Typography>)}
                 </Box>
               </Box>
             </Box>

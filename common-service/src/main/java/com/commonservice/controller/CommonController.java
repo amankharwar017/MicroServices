@@ -25,23 +25,14 @@ public class CommonController {
 
     @GetMapping("/shift/template")
     public ResponseEntity<byte[]> downloadShiftTemplate() throws IOException {
-
         byte[] file = commonService.downloadShiftTemplate();
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=Shift_Master_Template.xlsx")
-                .contentType(MediaType.parseMediaType(
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
-                .body(file);
+        return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Shift_Master_Template.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")).body(file);
     }
 
     @PostMapping("/shift/validate-multiple")
-    public ResponseEntity<List<Map<String, Object>>> validateMultipleShifts(
-            @RequestBody List<Map<String, Object>> requests) {
+    public ResponseEntity<List<Map<String, Object>>> validateMultipleShifts(@RequestBody List<Map<String, Object>> requests) {
 
-        return ResponseEntity.ok(
-                commonService.validateMultipleShifts(requests)
-        );
+        return ResponseEntity.ok(commonService.validateMultipleShifts(requests));
     }
 }

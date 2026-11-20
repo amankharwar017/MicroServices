@@ -9,7 +9,10 @@ import TextField from "../../components/TextField";
 import TextArea from "../../components/TextArea";
 import MultiselectAutoComplete from "../../components/MultiselectAutoComplete";
 import Attachment from "../../components/Attachment";
-import { getShiftById, getShiftDropdownOptions, updateShift } from "../shift-api";
+import { getShiftById, updateShift } from "../shift-api";
+import { useDispatch, useSelector } from "react-redux";
+import type { RootState, AppDispatch } from "../../redux/store";
+import { fetchShiftDropdownOptions, selectFreshDropdownOptions, fetchShiftById, selectShiftById } from "../../redux/cacheSlice";
 import { shiftValidationSchema } from "../shift-validation";
 import type { ShiftFormValues } from "../shift-validation";
 import type { DropdownOptionResponse, ShiftFormData } from "../../types/shift";
@@ -45,6 +48,9 @@ const initialFormData: ShiftFormData = {
 
 
 function UpdateShiftForm({ editShiftId, onSuccess, onError, onBack }: UpdateShiftFormProps) {
+  const dispatch = useDispatch<AppDispatch>();
+  const dropdownOptions = useSelector(selectFreshDropdownOptions);
+  const shiftFromCache = useSelector((state: RootState) => selectShiftById(state, editShiftId));
   const [formData, setFormData] = useState<ShiftFormData>(initialFormData);
   const [originalFormData, setOriginalFormData] = useState<ShiftFormData | null>(null);
   const [originalIsDeleted, setOriginalIsDeleted] = useState(false);
@@ -59,23 +65,43 @@ function UpdateShiftForm({ editShiftId, onSuccess, onError, onBack }: UpdateShif
   const { handleSubmit: handleFormSubmit, reset, setValue, formState: { errors: formErrors }, } = useForm<ShiftFormValues>({ resolver: yupResolver(shiftValidationSchema), defaultValues: initialFormData, });
 
   useEffect(() => {
-    const fetchDropdownOptions = async () => {
-      try {
-        const response = await getShiftDropdownOptions();
-        const data = response.data;
-        const mapOptions = (options: DropdownOptionResponse[]) => options.map((option) => ({ label: option.name === "ALL" ? "All" : option.name, value: option.name, }));
-        setShiftTypeOptions(mapOptions(data.shiftTypes));
-        setDayOptions(mapOptions(data.applicableDays));
-        setOvertimeOptions(data.overtimeOptions.map((option) => ({ label: option.name, value: option.name.toLowerCase() === "yes" ? "true" : "false", })));
-        setNightShiftOptions(data.nightShiftOptions.map((option) => ({ label: option.name, value: option.name.toLowerCase() === "yes" ? "true" : "false", })));
-        setWeeklyOffOptions(data.weeklyOffOptions.map((option) => ({ label: option.name, value: option.name.toLowerCase() === "yes" ? "true" : "false", })));
-        setStatusOptions(data.statusOptions.map((option) => ({ label: option.name, value: option.name.toLowerCase() === "active" ? "true" : "false", })));
-      } catch (error) {
-        onError("Failed to load shift dropdown options.");
-      }
-    };
-    void fetchDropdownOptions();
-  }, [onError]);
+    void dispatch(fetchShiftDropdownOptions());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!dropdownOptions) return;
+    const mapOptions = (options: DropdownOptionResponse[]) =>
+      options.map((option) => ({
+        label: option.name === "ALL" ? "All" : option.name,
+        value: option.name,
+      }));
+    setShiftTypeOptions(mapOptions(dropdownOptions.shiftTypes));
+    setDayOptions(mapOptions(dropdownOptions.applicableDays));
+    setOvertimeOptions(
+      dropdownOptions.overtimeOptions.map((option) => ({
+        label: option.name,
+        value: option.name.toLowerCase() === "yes" ? "true" : "false",
+      }))
+    );
+    setNightShiftOptions(
+      dropdownOptions.nightShiftOptions.map((option) => ({
+        label: option.name,
+        value: option.name.toLowerCase() === "yes" ? "true" : "false",
+      }))
+    );
+    setWeeklyOffOptions(
+      dropdownOptions.weeklyOffOptions.map((option) => ({
+        label: option.name,
+        value: option.name.toLowerCase() === "yes" ? "true" : "false",
+      }))
+    );
+    setStatusOptions(
+      dropdownOptions.statusOptions.map((option) => ({
+        label: option.name,
+        value: option.name.toLowerCase() === "active" ? "true" : "false",
+      }))
+    );
+  }, [dropdownOptions]);
 
   const syncField = (name: keyof ShiftFormValues, value: unknown) => {
     setValue(name, value as never, { shouldDirty: true, shouldValidate: true });
@@ -179,42 +205,46 @@ function UpdateShiftForm({ editShiftId, onSuccess, onError, onBack }: UpdateShif
       setErrors({});
       setSelectedFile(null);
       try {
-        const response = await getShiftById(editShiftId);
-        const shift = response.data;
-        setOriginalIsDeleted(Boolean(shift.isDeleted));
-        const shiftData: ShiftFormData = {
-          shiftCode: shift.shiftCode ?? "",
-          shiftName: shift.shiftName ?? "",
-          displayName: shift.displayName ?? "",
-          shiftType: shift.shiftType ?? "General",
-          startTime: shift.startTime ?? "",
-          endTime: shift.endTime ?? "",
-          breakStart: shift.breakStart ?? "",
-          breakEnd: shift.breakEnd ?? "",
-          graceIn: shift.graceIn ?? null,
-          graceOut: shift.graceOut ?? null,
-          overtimeAllowed: shift.overtimeAllowed ?? false,
-          nightShift: shift.nightShift ?? false,
-          weeklyOff: shift.weeklyOff ?? false,
-          shiftColor: shift.shiftColor ?? "#000000",
-          applicableDays: shift.applicableDays ?? [],
-          description: shift.description ?? "",
-          attachment: shift.attachment ?? "",
-          remarks: shift.remarks ?? "",
-          status: shift.status ?? true,
-        };
-        setFormData(shiftData);
-        reset(shiftData);
-        setOriginalFormData(shiftData);
-        setSelectedFile(null);
-        setErrors({});
+        if (shiftFromCache) {
+          const shift = shiftFromCache;
+          setOriginalIsDeleted(Boolean(shift.isDeleted));
+          const shiftData: ShiftFormData = {
+            shiftCode: shift.shiftCode ?? "",
+            shiftName: shift.shiftName ?? "",
+            displayName: shift.displayName ?? "",
+            shiftType: shift.shiftType ?? "General",
+            startTime: shift.startTime ?? "",
+            endTime: shift.endTime ?? "",
+            breakStart: shift.breakStart ?? "",
+            breakEnd: shift.breakEnd ?? "",
+            graceIn: shift.graceIn ?? null,
+            graceOut: shift.graceOut ?? null,
+            overtimeAllowed: shift.overtimeAllowed ?? false,
+            nightShift: shift.nightShift ?? false,
+            weeklyOff: shift.weeklyOff ?? false,
+            shiftColor: shift.shiftColor ?? "#000000",
+            applicableDays: shift.applicableDays ?? [],
+            description: shift.description ?? "",
+            attachment: shift.attachment ?? "",
+            remarks: shift.remarks ?? "",
+            status: shift.status ?? true,
+          };
+          setFormData(shiftData);
+          reset(shiftData);
+          setOriginalFormData(shiftData);
+          setSelectedFile(null);
+          setErrors({});
+        } else {
+          await dispatch(fetchShiftById(editShiftId));
+        }
       } catch (error) {
         console.error("Failed to fetch data for edit:", error);
         onError("Failed to load shift details.");
       }
     };
+
     fetchShiftForEdit();
-  }, [editShiftId, reset]);
+  }, [editShiftId, shiftFromCache, dispatch, reset]);
 
   return (
     <Paper elevation={0} className="shift-form-card">
@@ -267,7 +297,7 @@ function UpdateShiftForm({ editShiftId, onSuccess, onError, onBack }: UpdateShif
             </Box>
             <Box className="shift-form-attachment-content">
               <Attachment label="Choose Attachment" accept=".pdf,.doc,.docx" onChange={handleFileChange} />
-              {selectedFile && ( <Typography variant="body2" className="shift-form-selected-file">Selected file: {selectedFile.name}</Typography>)}
+              {selectedFile && (<Typography variant="body2" className="shift-form-selected-file">Selected file: {selectedFile.name}</Typography>)}
               {errors.attachment && (<Typography variant="caption" className="shift-form-attachment-error">{errors.attachment}</Typography>)}
             </Box>
           </Box>

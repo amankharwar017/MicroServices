@@ -332,11 +332,11 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
                           { label: "All", value: "All" },
                           ...shiftTypeOptions.map(type => ({ label: type, value: type }))
                         ]} onChange={handleShiftTypeChange} />
-                        <Box className="shift-search-options" sx={{ display: dashboardLayout ? "contents" : "flex", gap: 2, flexWrap: "wrap" }}>
-                          <Box sx={dashboardLayout ? { width: "auto", maxWidth: "none" } : { width: 130, maxWidth: "50%" }}>
+                        <Box className="shift-search-options" sx={{ display: "flex", gap: 1, flexWrap: "nowrap", minWidth: 0 }}>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
                             <MultiselectAutoComplete label="Night Shift" name="nightShift" value={formData.nightShift} multiple={false} disableClearable options={nightShiftOptions} onChange={handleNightShiftChange} />
                           </Box>
-                          <Box sx={dashboardLayout ? { width: "auto", maxWidth: "none" } : { width: 120, maxWidth: "50%" }}>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
                             <MultiselectAutoComplete label="Status" name="status" value={formData.status === null ? "all" : formData.status ? "true" : "false"} multiple={false} disableClearable options={statusOptions} onChange={handleStatusChange} />
                           </Box>
                         </Box>

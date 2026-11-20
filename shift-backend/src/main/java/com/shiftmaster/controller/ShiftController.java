@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.Map;
@@ -44,36 +45,42 @@ public class ShiftController {
     private final ShiftNotificationService shiftNotificationService;
     private final DropdownService dropdownService;
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @PostMapping("save-multiple")
     public ResponseEntity<ApiResponseDto> saveMultipleShifts(@RequestBody List<@Valid ShiftRequestDto> requests) {
         return shiftService.saveMultipleShifts(requests);
     }
 
-
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("delete/{shiftId}")
     public ResponseEntity<ApiResponseDto> deleteShift(@PathVariable Long shiftId) {
         return shiftService.deleteShift(shiftId);
     }
+
 
     @GetMapping("list")
     public ResponseEntity<Page<ShiftResponseDto>> getAllShifts(@ParameterObject @PageableDefault(page = 0, size = 10) Pageable pageable) {
         return ResponseEntity.ok(shiftService.getAllShifts(pageable));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @GetMapping("{id}")
     public ResponseEntity<ShiftResponseDto> getShiftById(@PathVariable Long id) {
         return ResponseEntity.ok(shiftService.getShiftById(id));
     }
 
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @PostMapping("search")
     public ResponseEntity<Page<ShiftResponseDto>> searchShifts(@ParameterObject @ModelAttribute ShiftSearchRequestDto request, @ParameterObject @PageableDefault(page = 0, size = 10) Pageable pageable) {
         return ResponseEntity.ok(shiftService.searchShifts(request, pageable));
     }
 
+
     @GetMapping("history/{shiftId}")
     public ResponseEntity<List<ShiftHistoryResponseDto>> getShiftHistory(@PathVariable Long shiftId) {
         return ResponseEntity.ok(shiftHistoryService.getHistory(shiftId));
     }
+
 
     @GetMapping("/notifications")
     public ResponseEntity<Map<String, Object>> getNotifications(@PageableDefault(size = 10) Pageable pageable) {
@@ -87,11 +94,13 @@ public class ShiftController {
         return ResponseEntity.ok(Map.of("message", "Notification marked as read"));
     }
 
+
     @PatchMapping("/notifications/read-all")
     public ResponseEntity<Map<String, String>> markAllNotificationsAsRead() {
         shiftNotificationService.markAllAsRead();
         return ResponseEntity.ok(Map.of("message", "All notifications marked as read"));
     }
+
 
     @GetMapping("dropdown-options")
     public ResponseEntity<DropdownOptionsDto> getDropdownOptions() {
