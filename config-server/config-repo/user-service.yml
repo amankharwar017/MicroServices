@@ -17,6 +17,7 @@ server:
 eureka:
   instance:
     hostname: user-service-4h9p.onrender.com
+    instance-id: user-service-4h9p.onrender.com
     non-secure-port-enabled: false
     secure-port-enabled: true
     secure-port: 443
