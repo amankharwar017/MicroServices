@@ -26,7 +26,7 @@ spring:
               lower-case-service-id: true
           routes:
             - id: auth-service
-              uri: https://user-service-4h9p.onrender.com
+              uri: lb://AUTH-SERVICE
               predicates:
                 - Path=/auth/**
 
