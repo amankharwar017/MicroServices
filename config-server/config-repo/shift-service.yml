@@ -38,6 +38,13 @@ logging:
     org.springframework.security: DEBUG
 
 eureka:
+  instance:
+    hostname: shift-service-3be9.onrender.com
+    instance-id: shift-service-3be9.onrender.com
+    non-secure-port-enabled: false
+    secure-port-enabled: true
+    secure-port: 443
+
   client:
     register-with-eureka: true
     fetch-registry: true

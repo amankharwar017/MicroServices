@@ -1,12 +1,13 @@
-
 spring:
   application:
     name: common-service
+
   datasource:
     url: jdbc:mysql://shift-master-db-pf6pdh.db.enzonic.com:3306/main?ssl-mode=REQUIRED
     username: u_9acvvuyu2t
     password: nUkwUfqkokj1wQUFpJeUFjeGqrOTB8OW
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -17,6 +18,13 @@ server:
   port: ${PORT:8085}
 
 eureka:
+  instance:
+    hostname: common-service-tc3i.onrender.com
+    instance-id: common-service-tc3i.onrender.com
+    non-secure-port-enabled: false
+    secure-port-enabled: true
+    secure-port: 443
+
   client:
     register-with-eureka: true
     fetch-registry: true
