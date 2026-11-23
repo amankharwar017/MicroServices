@@ -6,9 +6,14 @@ server:
   port: ${PORT:8761}
 
 eureka:
+  instance:
+    hostname: eureka-service-0gqf.onrender.com
+
   client:
     register-with-eureka: false
     fetch-registry: false
+    service-url:
+      defaultZone: https://eureka-service-0gqf.onrender.com/eureka/
 
   server:
     enable-self-preservation: true
