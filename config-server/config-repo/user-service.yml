@@ -1,7 +1,7 @@
 spring:
   datasource:
     url: jdbc:mysql://shift-master-db-pf6pdh.db.enzonic.com:3306/main?ssl-mode=REQUIRED
-    username: u_9acvuyu2t
+    username: u_9acvvuyu2t
     password: nUkwUfqkokj1wQUFpJeUFjeGqrOTB8OW
     driver-class-name: com.mysql.cj.jdbc.Driver
 

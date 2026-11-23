@@ -1,62 +1,147 @@
 package com.apigateway.security;
 
-import io.jsonwebtoken.JwtException;
 import org.jspecify.annotations.NonNull;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
+
+import java.util.Map;
 
 @Component
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
-    private final JwtService jwtService;
+    private final WebClient.Builder webClientBuilder;
 
-    public JwtAuthenticationFilter(JwtService jwtService) {
-        this.jwtService = jwtService;
+    public JwtAuthenticationFilter(WebClient.Builder webClientBuilder) {
+        this.webClientBuilder = webClientBuilder;
     }
 
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, @NonNull GatewayFilterChain chain) {
+    public Mono<Void> filter(
+            ServerWebExchange exchange,
+            @NonNull GatewayFilterChain chain
+    ) {
 
         String path = exchange.getRequest().getURI().getPath();
 
-        if (path.equals("/auth/login") || path.equals("/auth/register")) {
+        /*
+         * Login and register do not have JWT.
+         * They must go directly to User Service.
+         */
+        if (path.equals("/auth/login")
+                || path.equals("/auth/register")) {
+
             return chain.filter(exchange);
         }
 
-        String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
+        String authHeader =
+                exchange.getRequest()
+                        .getHeaders()
+                        .getFirst("Authorization");
 
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+        if (authHeader == null
+                || !authHeader.startsWith("Bearer ")) {
+
+            exchange.getResponse()
+                    .setStatusCode(HttpStatus.UNAUTHORIZED);
+
             return exchange.getResponse().setComplete();
         }
 
-        String token = authHeader.substring(7);
+        /*
+         * Gateway does NOT validate JWT anymore.
+         *
+         * It sends the JWT to Auth Service.
+         */
+        return webClientBuilder
+                .build()
+                .post()
+                .uri("http://AUTH-SERVICE/auth/validate")
+                .header("Authorization", authHeader)
+                .retrieve()
+                .bodyToMono(
+                        new ParameterizedTypeReference<Map<String, Object>>() {}
+                )
+                .flatMap(authResponse -> {
 
-        try {
-            String username = jwtService.extractUsername(token);
-            String role = jwtService.extractRole(token);
-            Long userId = jwtService.extractUserId(token);
+                    Object usernameObject =
+                            authResponse.get("username");
 
-            if (username == null || role == null || userId == null || !jwtService.isTokenValid(token)) {
-                exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                return exchange.getResponse().setComplete();
-            }
-            ServerWebExchange modifiedExchange = exchange.mutate().request(request -> request.headers(headers -> {
-                headers.set("X-Username", username);
-                headers.set("X-Role", role);
-                headers.set("X-User-Id", String.valueOf(userId));
-            })).build();
-            return chain.filter(modifiedExchange);
+                    Object roleObject =
+                            authResponse.get("role");
 
-        } catch (JwtException | IllegalArgumentException exception) {
-            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-            return exchange.getResponse().setComplete();
-        }
+                    Object userIdObject =
+                            authResponse.get("userId");
+
+                    if (usernameObject == null
+                            || roleObject == null
+                            || userIdObject == null) {
+
+                        exchange.getResponse()
+                                .setStatusCode(
+                                        HttpStatus.UNAUTHORIZED
+                                );
+
+                        return exchange.getResponse()
+                                .setComplete();
+                    }
+
+                    String username =
+                            String.valueOf(usernameObject);
+
+                    String role =
+                            String.valueOf(roleObject);
+
+                    String userId =
+                            String.valueOf(userIdObject);
+
+                    /*
+                     * Auth Service has validated the JWT.
+                     *
+                     * Now Gateway adds identity headers
+                     * before forwarding the request.
+                     */
+                    ServerWebExchange modifiedExchange =
+                            exchange.mutate()
+                                    .request(request ->
+                                            request.headers(headers -> {
+
+                                                headers.set(
+                                                        "X-Username",
+                                                        username
+                                                );
+
+                                                headers.set(
+                                                        "X-Role",
+                                                        role
+                                                );
+
+                                                headers.set(
+                                                        "X-User-Id",
+                                                        userId
+                                                );
+                                            })
+                                    )
+                                    .build();
+
+                    return chain.filter(modifiedExchange);
+                })
+                .onErrorResume(exception -> {
+
+                    exchange.getResponse()
+                            .setStatusCode(
+                                    HttpStatus.UNAUTHORIZED
+                            );
+
+                    return exchange.getResponse()
+                            .setComplete();
+                });
     }
 
     @Override

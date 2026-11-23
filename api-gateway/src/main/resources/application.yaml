@@ -1,9 +1,10 @@
-
 spring:
   application:
     name: api-gateway
+
   config:
     import: "optional:configserver:http://localhost:8888"
+
   cloud:
     gateway:
       server:
@@ -12,8 +13,6 @@ spring:
             locator:
               enabled: true
               lower-case-service-id: true
-  jwt:
-    secret: ${JWT_SECRET}
 
 server:
   port: 8086
