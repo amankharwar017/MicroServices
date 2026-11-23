@@ -1,9 +1,8 @@
-
 spring:
   application:
     name: user-service
   config:
-    import: "optional:configserver:https://config-server-ybdw.onrender.com"
+    import: "configserver:https://config-server-2pkz.onrender.com"
 
-  jwt:
-    secret: ${JWT_SECRET}
+jwt:
+  secret: ${JWT_SECRET}
