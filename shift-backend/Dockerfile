@@ -4,8 +4,16 @@ WORKDIR /app
 
 COPY . .
 
-RUN chmod +x gradlew
-RUN ./gradlew clean bootJar --no-daemon
+RUN chmod +x shift-backend/gradlew
+RUN chmod +x common-service/gradlew
+
+WORKDIR /app/common-service
+
+RUN ./gradlew clean jar --no-daemon -x test
+
+WORKDIR /app/shift-backend
+
+RUN ./gradlew clean bootJar --no-daemon -x test
 
 EXPOSE 8080
 

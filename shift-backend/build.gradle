@@ -1,4 +1,3 @@
-
 plugins {
     id 'java'
     id 'org.springframework.boot' version '4.1.1'
@@ -17,6 +16,10 @@ java {
 
 repositories {
     mavenCentral()
+
+    flatDir {
+        dirs '../common-service/build/libs'
+    }
 }
 
 dependencyManagement {
@@ -39,10 +42,10 @@ dependencies {
     implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
-
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
-    implementation 'com.commonservice:common-service:0.0.1-SNAPSHOT'
+
+    implementation files('../common-service/build/libs/common-service-0.0.1-SNAPSHOT.jar')
 
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
