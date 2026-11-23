@@ -25,8 +25,7 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<Map<String, String>> register(@Valid @RequestBody RegisterRequestDto request) {
         String message = userService.register(request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", message));
-    }
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", message));}
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
