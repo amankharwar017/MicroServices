@@ -19,6 +19,13 @@ jwt:
   expiration: 3600000
 
 eureka:
+  instance:
+    hostname: auth-service-fr33.onrender.com
+    instance-id: auth-service-fr33.onrender.com
+    non-secure-port-enabled: false
+    secure-port-enabled: true
+    secure-port: 443
+
   client:
     register-with-eureka: true
     fetch-registry: true
