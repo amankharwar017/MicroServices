@@ -18,7 +18,7 @@ spring:
             enable: true
   data:
     redis:
-      host: 127.0.0.1
+      host: red-dc2bajqvcj2c7391c470
       port: 6379
       timeout: 60000ms
 shift:

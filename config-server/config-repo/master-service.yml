@@ -10,7 +10,11 @@ spring:
       ddl-auto: update
     show-sql: true
     open-in-view: false
-
+  data:
+    redis:
+      host: red-dc2bajqvcj2c7391c470
+      port: 6379
+      timeout: 60000ms
 server:
   port: ${PORT:8084}
 
