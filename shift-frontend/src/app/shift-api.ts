@@ -1,7 +1,7 @@
 import type { ShiftDropdownOptionsResponse } from "../types/shift";
 import axios from "axios";
 const axiosInstance = axios.create({
-  baseURL: "http://localhost:8086",
+  baseURL: "https://api-gateway-b427.onrender.com",
 });
 axiosInstance.interceptors.request.use(
   (config) => { const token = localStorage.getItem("token");
