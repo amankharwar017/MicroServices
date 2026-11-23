@@ -12,7 +12,7 @@ spring:
     open-in-view: false
 
 server:
-  port: 8083
+  port: ${PORT:8083}
 
 eureka:
   client:
