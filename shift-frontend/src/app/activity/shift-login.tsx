@@ -66,7 +66,7 @@ function ShiftLogin({ onLoginSuccess }: LoginProps) {
         setLoading(true);
         try {
             if (mode === "register") {
-                const response = await axios.post("https://api-gateway-b427.onrender.com/auth/register", {
+                const response = await axios.post("https://api-gateway-b427.onrender.com/user/register", {
                     username: cleanUsername,
                     email: cleanEmail,
                     password
@@ -77,7 +77,7 @@ function ShiftLogin({ onLoginSuccess }: LoginProps) {
                 setConfirmPassword("");
                 setSuccess(typeof response.data === "string" ? response.data : "Registration successful. Please log in.");
             } else {
-                const response = await axios.post("https://api-gateway-b427.onrender.com/auth/login", {
+                const response = await axios.post("https://api-gateway-b427.onrender.com/user/login", {
                     username: cleanUsername,
                     password
                 });

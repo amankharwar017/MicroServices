@@ -23,42 +23,21 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     }
 
     @Override
-    public Mono<Void> filter(
-            ServerWebExchange exchange,
-            @NonNull GatewayFilterChain chain
-    ) {
+    public Mono<Void> filter(ServerWebExchange exchange, @NonNull GatewayFilterChain chain) {
 
         String path = exchange.getRequest().getURI().getPath();
-
-        /*
-         * Login and register do not have JWT.
-         * They must go directly to User Service.
-         */
-        if (path.equals("/auth/login")
-                || path.equals("/auth/register")) {
-
+        if (path.equals("/user/login") || path.equals("/user/register")) {
             return chain.filter(exchange);
         }
 
-        String authHeader =
-                exchange.getRequest()
-                        .getHeaders()
-                        .getFirst("Authorization");
+        String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
 
-        if (authHeader == null
-                || !authHeader.startsWith("Bearer ")) {
-
-            exchange.getResponse()
-                    .setStatusCode(HttpStatus.UNAUTHORIZED);
-
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
             return exchange.getResponse().setComplete();
         }
 
-        /*
-         * Gateway does NOT validate JWT anymore.
-         *
-         * It sends the JWT to Auth Service.
-         */
+
         return webClientBuilder
                 .build()
                 .post()
@@ -66,81 +45,38 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 .header("Authorization", authHeader)
                 .retrieve()
                 .bodyToMono(
-                        new ParameterizedTypeReference<Map<String, Object>>() {}
-                )
-                .flatMap(authResponse -> {
+                        new ParameterizedTypeReference<Map<String, Object>>() {
+                        }
+                ).flatMap(authResponse -> {
 
-                    Object usernameObject =
-                            authResponse.get("username");
+                    Object usernameObject = authResponse.get("username");
+                    Object roleObject = authResponse.get("role");
+                    Object userIdObject = authResponse.get("userId");
 
-                    Object roleObject =
-                            authResponse.get("role");
-
-                    Object userIdObject =
-                            authResponse.get("userId");
-
-                    if (usernameObject == null
-                            || roleObject == null
-                            || userIdObject == null) {
-
-                        exchange.getResponse()
-                                .setStatusCode(
-                                        HttpStatus.UNAUTHORIZED
-                                );
-
-                        return exchange.getResponse()
-                                .setComplete();
+                    if (usernameObject == null || roleObject == null || userIdObject == null) {
+                        exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                        return exchange.getResponse().setComplete();
                     }
 
-                    String username =
-                            String.valueOf(usernameObject);
+                    String username = String.valueOf(usernameObject);
 
-                    String role =
-                            String.valueOf(roleObject);
+                    String role = String.valueOf(roleObject);
 
-                    String userId =
-                            String.valueOf(userIdObject);
+                    String userId = String.valueOf(userIdObject);
 
-                    /*
-                     * Auth Service has validated the JWT.
-                     *
-                     * Now Gateway adds identity headers
-                     * before forwarding the request.
-                     */
+
                     ServerWebExchange modifiedExchange =
-                            exchange.mutate()
-                                    .request(request ->
-                                            request.headers(headers -> {
-
-                                                headers.set(
-                                                        "X-Username",
-                                                        username
-                                                );
-
-                                                headers.set(
-                                                        "X-Role",
-                                                        role
-                                                );
-
-                                                headers.set(
-                                                        "X-User-Id",
-                                                        userId
-                                                );
-                                            })
-                                    )
-                                    .build();
-
+                            exchange.mutate().request(request -> request.headers(headers -> {
+                                        headers.set("X-Username", username);
+                                        headers.set("X-Role", role);
+                                        headers.set("X-User-Id", userId);
+                                    })
+                            ).build();
                     return chain.filter(modifiedExchange);
                 })
                 .onErrorResume(exception -> {
-
-                    exchange.getResponse()
-                            .setStatusCode(
-                                    HttpStatus.UNAUTHORIZED
-                            );
-
-                    return exchange.getResponse()
-                            .setComplete();
+                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+                    return exchange.getResponse().setComplete();
                 });
     }
 

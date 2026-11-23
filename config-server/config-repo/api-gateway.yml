@@ -33,7 +33,7 @@ spring:
             - id: user-service
               uri: lb://USER-SERVICE
               predicates:
-                - Path=/users/**
+                - Path=/user/**
 
             - id: shift-service
               uri: lb://SHIFT-SERVICE
