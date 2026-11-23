@@ -3,7 +3,7 @@ spring:
   application:
     name: shift-service
   config:
-    import: "optional:configserver:http://localhost:8888"
+    import: "configserver:https://config-server-2pkz.onrender.com"
 
   mail:
     host: smtp.gmail.com
