@@ -16,10 +16,9 @@ function Sidebar({ activePage, onPageChange, open, onClose }: SidebarProps) {
     return (
         <Drawer
             anchor="left"
-            variant="temporary"
+            variant="persistent"
             open={open}
             onClose={onClose}
-            ModalProps={{ keepMounted: true }}
             sx={{
                 "& .MuiDrawer-paper": {
                     width: drawerWidth,

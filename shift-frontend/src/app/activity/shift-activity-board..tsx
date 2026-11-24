@@ -524,7 +524,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
     return (<>
         <Box className="dashboard-layout">
             <Sidebar activePage={activePage} onPageChange={onPageChange} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-            <Box component="main" className="dashboard-main">
+            <Box component="main" className="dashboard-main" sx={{ ml: sidebarOpen ? "240px" : 0, width: sidebarOpen ? "calc(100% - 240px)" : "100%", transition: "all 0.3s ease" }}>
                 <Header username={username} role={role} anchorEl={profileAnchorEl} onProfileClick={handleProfileClick} onProfileClose={handleProfileClose} onLogout={onLogout} onMenuClick={() => setSidebarOpen(true)} />
                 <Box className="dashboard-content">
                     {activePage === "dashboard" ? (
@@ -572,9 +572,9 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
                                             <Box className="shift-table-actions" sx={{ display: "flex", alignItems: "center", justifyContent: "flex-start", gap: 0.5 }}>
                                                 {role === "ADMIN" && (
                                                     <>
-                                                        {shift.status && !shift.isDeleted && ( <Tooltip title="Delete">
-                                                                <IconButton size="small" className="shift-delete-button" onClick={() => handleDelete(shift)}> <DeleteIcon fontSize="small" /> </IconButton>
-                                                                 </Tooltip>
+                                                        {shift.status && !shift.isDeleted && (<Tooltip title="Delete">
+                                                            <IconButton size="small" className="shift-delete-button" onClick={() => handleDelete(shift)}> <DeleteIcon fontSize="small" /> </IconButton>
+                                                        </Tooltip>
                                                         )}
                                                         <Tooltip title="Edit">
                                                             <IconButton size="small" className="shift-edit-button" onClick={() => handleEdit(shift.id)}> <EditIcon fontSize="small" /> </IconButton>
