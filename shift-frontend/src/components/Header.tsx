@@ -1,4 +1,3 @@
-
 import { AppBar, Toolbar, Typography, Box, IconButton, Menu, Divider, Button } from "@mui/material";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import LogoutIcon from "@mui/icons-material/Logout";
@@ -6,6 +5,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PersonIcon from "@mui/icons-material/Person";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import Notification from "../app/activity/notification";
+import MenuIcon from "@mui/icons-material/Menu";
 
 type HeaderProps = {
     username: string;
@@ -14,14 +14,18 @@ type HeaderProps = {
     onProfileClick: (event: React.MouseEvent<HTMLElement>) => void;
     onProfileClose: () => void;
     onLogout: () => void;
+    onMenuClick: () => void;
 };
 
-function Header({ username, role, anchorEl, onProfileClick, onProfileClose, onLogout }: HeaderProps) {
+function Header({ username, role, anchorEl, onProfileClick, onProfileClose, onLogout, onMenuClick }: HeaderProps) {
     const open = Boolean(anchorEl);
 
     return (
         <AppBar position="fixed" elevation={0} className="dashboard-header">
             <Toolbar className="dashboard-header-toolbar">
+                <IconButton onClick={onMenuClick} aria-label="Open menu" sx={{ color: "#334155", mr: 1 }}>
+                    <MenuIcon />
+                </IconButton>
                 <Box component="img" src="/dreamsol-logo.jpg" alt="DreamSol TeleSolutions" sx={{ height: 44, width: "auto", maxWidth: 220, objectFit: "contain" }} />
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1, ml: "auto", color: "#334155" }}>
                     <Notification />

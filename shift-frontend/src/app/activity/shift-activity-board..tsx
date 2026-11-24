@@ -129,6 +129,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
     const [excelInvalidRows, setExcelInvalidRows] = useState<{ rowNumber: number; data: Record<string, unknown>; errors: string[] }[]>([]);
     const [downloadMenuAnchor, setDownloadMenuAnchor] = useState<HTMLElement | null>(null);
     const [fabHovered, setFabHovered] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     const [profileAnchorEl, setProfileAnchorEl] = useState<HTMLElement | null>(null);
     const handleProfileClick = (event: MouseEvent<HTMLElement>) => setProfileAnchorEl(event.currentTarget);
@@ -522,9 +523,9 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
     const sorting: MRT_SortingState = sortModel.map((item) => ({ id: item.field, desc: item.sort === "desc" }));
     return (<>
         <Box className="dashboard-layout">
-            <Sidebar activePage={activePage} onPageChange={onPageChange} />
+            <Sidebar activePage={activePage} onPageChange={onPageChange} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <Box component="main" className="dashboard-main">
-                <Header username={username} role={role} anchorEl={profileAnchorEl} onProfileClick={handleProfileClick} onProfileClose={handleProfileClose} onLogout={onLogout} />
+                <Header username={username} role={role} anchorEl={profileAnchorEl} onProfileClick={handleProfileClick} onProfileClose={handleProfileClose} onLogout={onLogout} onMenuClick={() => setSidebarOpen(true)} />
                 <Box className="dashboard-content">
                     {activePage === "dashboard" ? (
                         <>
