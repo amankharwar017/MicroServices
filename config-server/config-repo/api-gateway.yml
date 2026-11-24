@@ -26,27 +26,27 @@ spring:
               lower-case-service-id: true
           routes:
             - id: auth-service
-              uri: lb://AUTH-SERVICE
+              uri: https://auth-service-fr33.onrender.com
               predicates:
                 - Path=/auth/**
 
             - id: user-service
-              uri: lb://USER-SERVICE
+              uri: https://user-service-4h9p.onrender.com
               predicates:
                 - Path=/user/**
 
             - id: shift-service
-              uri: lb://SHIFT-SERVICE
+              uri: https://shift-service-3be9.onrender.com
               predicates:
                 - Path=/shift/**
 
             - id: master-service
-              uri: lb://MASTER-SERVICE
+              uri: https://master-service-6mja.onrender.com
               predicates:
                 - Path=/master/**
 
             - id: common-service
-              uri: lb://COMMON-SERVICE
+              uri: https://common-service-tc3i.onrender.com
               predicates:
                 - Path=/common/**
 
@@ -60,10 +60,3 @@ eureka:
     service-url:
       defaultZone: https://eureka-service-0gqf.onrender.com/eureka/
 
-render:
-  services:
-    auth-service: https://auth-service-fr33.onrender.com
-    user-service: https://user-service-4h9p.onrender.com
-    shift-service: https://shift-service-3be9.onrender.com
-    master-service: https://master-service-6mja.onrender.com
-    common-service: https://common-service-tc3i.onrender.com

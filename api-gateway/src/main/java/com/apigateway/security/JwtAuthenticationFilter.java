@@ -41,7 +41,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         return webClientBuilder
                 .build()
                 .post()
-                .uri("http://AUTH-SERVICE/auth/validate")
+                .uri("https://auth-service-fr33.onrender.com/auth/validate")
                 .header("Authorization", authHeader)
                 .retrieve()
                 .bodyToMono(
