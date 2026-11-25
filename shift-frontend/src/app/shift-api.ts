@@ -64,6 +64,9 @@ export const getCreationTrends = async (level: "YEARLY" | "MONTHLY" | "WEEKLY" |
   });
 };
 
+export const getDashboardCounts = () =>
+    axiosInstance.get("/shift/dashboard-counts");
+
 
 
 

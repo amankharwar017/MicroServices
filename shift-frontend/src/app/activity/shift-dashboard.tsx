@@ -8,10 +8,10 @@ import PieChart from "../../components/PieChart";
 import GaugeChart from "../../components/GaugeChart";
 import DashboardChartCard from "../../components/DashboardChartCard";
 import DashboardStatTiles from "../../components/DashboardStatTiles";
-import ShiftDrilldownDialog from "../../components/ShiftDrilldownDialog";
+import ShiftDrilldownDialog from "./ShiftDrilldownDialog";
 import DashboardFilterBar from "./dashboard-filter";
-import { getShiftList, searchShifts, getCreationTrends } from "../shift-api";
-import type { ShiftDropdownOptionsResponse, ShiftResponse } from "../../types/shift";
+import { getDashboardCounts, searchShifts, getCreationTrends } from "../shift-api";
+import type { ShiftResponse } from "../../types/shift";
 import type { ChartEngine, TableBreakdownRow, DrilldownPayload, ShiftAnalytics } from "../../types/chartTypes";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch } from "../../redux/store";
@@ -59,101 +59,54 @@ export default function ShiftDashboard() {
         setAnalytics(prev => prev ? { ...prev, creationTrends: response.data ?? [] } : prev);
     };
 
-    // Fetch the 3 summary APIs used when Dashboard is opened/refreshed.
-    const fetchSummaryCounts = useCallback(async (activeFilters: ShiftDashboardFilters) => {
-        const countFilters: Record<string, unknown> = {};
+    // // Fetch the 3 summary APIs used when Dashboard is opened/refreshed.
+    // const fetchSummaryCounts = useCallback(async (activeFilters: ShiftDashboardFilters) => {
+    //     const countFilters: Record<string, unknown> = {};
 
-        if (activeFilters.shiftTypes && activeFilters.shiftTypes.length > 0) {
-            countFilters.shiftType = activeFilters.shiftTypes;
-        }
+    //     if (activeFilters.shiftTypes && activeFilters.shiftTypes.length > 0) {
+    //         countFilters.shiftType = activeFilters.shiftTypes;
+    //     }
 
-        const [activeResponse, inactiveResponse, nightResponse] = await Promise.all([
-            searchShifts({ ...countFilters, status: true }, 0, 1, "id,asc"),
-            searchShifts({ ...countFilters, status: false }, 0, 1, "id,asc"),
-            searchShifts({ ...countFilters, nightShift: true }, 0, 1, "id,asc")
-        ]);
+    //     const [activeResponse, inactiveResponse, nightResponse] = await Promise.all([
+    //         searchShifts({ ...countFilters, status: true }, 0, 1, "id,asc"),
+    //         searchShifts({ ...countFilters, status: false }, 0, 1, "id,asc"),
+    //         searchShifts({ ...countFilters, nightShift: true }, 0, 1, "id,asc")
+    //     ]);
 
-        const active = activeResponse.data?.totalElements ?? 0;
-        const inactive = inactiveResponse.data?.totalElements ?? 0;
-        const night = nightResponse.data?.totalElements ?? 0;
+    //     const active = activeResponse.data?.totalElements ?? 0;
+    //     const inactive = inactiveResponse.data?.totalElements ?? 0;
+    //     const night = nightResponse.data?.totalElements ?? 0;
 
-        return {
-            total: active + inactive,
-            active,
-            inactive,
-            night
-        };
-    }, []);
+    //     return {
+    //         total: active + inactive,
+    //         active,
+    //         inactive,
+    //         night
+    //     };
+    // }, []);
 
     // One API call for the actual dashboard data.
-    const fetchDashboardData = useCallback(async (activeFilters: ShiftDashboardFilters, _signal?: AbortSignal, summary?: { total: number; active: number; inactive: number; night: number }) => {
+    const fetchDashboardData = useCallback(async () => {
         setFailed(false);
         try {
-            const statusVal = activeFilters.status.length === 1 ? activeFilters.status[0] === "Active" : undefined;
-            const nightShiftVal = activeFilters.nightShift.length === 1 ? activeFilters.nightShift[0] === "Yes" : undefined;
+            const response = await getDashboardCounts();
+            const data = response.data;
 
-            const searchParams: Record<string, unknown> = {};
-            if (activeFilters.createdDateFrom) {
-                searchParams.createdDateFrom = activeFilters.createdDateFrom;
-            }
-            if (activeFilters.createdDateTo) {
-                searchParams.createdDateTo = activeFilters.createdDateTo;
-            }
-            if (activeFilters.shiftTypes && activeFilters.shiftTypes.length > 0) {
-                searchParams.shiftType = activeFilters.shiftTypes;
-            }
-            if (statusVal !== undefined) {
-                searchParams.status = statusVal;
-            }
-            if (nightShiftVal !== undefined) {
-                searchParams.nightShift = nightShiftVal;
-            }
-
-            const hasActiveFilter = Object.keys(searchParams).length > 0;
-
-            const fetchSize = summary?.total ?? 10;
-
-            const response = hasActiveFilter
-                ? await searchShifts(searchParams, 0, fetchSize, "id,asc")
-                : await getShiftList(0, fetchSize, "id,asc");
-            const shiftList: ShiftResponse[] = response.data?.content ?? [];
-            setAllShifts(shiftList);
-
-            const calculatedActive = shiftList.filter(s => Boolean(s.status) && !Boolean(s.isDeleted)).length;
-            const calculatedInactive = shiftList.filter(s => !Boolean(s.status) || Boolean(s.isDeleted)).length;
-            const calculatedNight = shiftList.filter(s => Boolean(s.nightShift)).length;
-
-            const totalCount = response.data?.totalElements ?? shiftList.length;
-            const activeCount = calculatedActive;
-            const inactiveCount = calculatedInactive;
-            const nightCount = calculatedNight;
-
-
-
-            // Group by Shift Type
-            const typeMap = new Map<string, { name: string; count: number; active: number; inactive: number }>();
-            shiftList.forEach(s => {
-                const rawType = (s.shiftType || "Unspecified").trim().toLowerCase();
-                const type = rawType.charAt(0).toUpperCase() + rawType.slice(1);
-
-                const isActive = Boolean(s.status) && !Boolean(s.isDeleted);
-                const entry = typeMap.get(type) ?? { name: type, count: 0, active: 0, inactive: 0 };
-                entry.count += 1;
-                if (isActive) entry.active += 1;
-                else entry.inactive += 1;
-                typeMap.set(type, entry);
+            setSummaryCounts({
+                total: data.total,
+                active: data.active,
+                inactive: data.inactive,
+                night: data.nightShift
             });
 
-            const dayCount = Math.max(0, totalCount - nightCount);
-            const computedAnalytics: ShiftAnalytics = {
-                total: totalCount,
-                active: activeCount,
-                inactive: inactiveCount,
-                creationTrends: [],
-                shiftsByType: Array.from(typeMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
-                nightDistribution: [{ name: "Night Shift", count: nightCount }, { name: "Day Shift", count: dayCount }]
-            };
-            setAnalytics(prev => ({ ...computedAnalytics, creationTrends: prev?.creationTrends ?? [] }));
+            setAnalytics(prev => ({
+                total: data.total,
+                active: data.active,
+                inactive: data.inactive,
+                creationTrends: prev?.creationTrends ?? [],
+                shiftsByType: data.shiftsByType,
+                nightDistribution: data.nightDistribution
+            }));
         } catch (err) {
             if (!isCancel(err)) {
                 console.error("Failed to load shift dashboard data:", err);
@@ -169,20 +122,19 @@ export default function ShiftDashboard() {
     const loadInitialDashboard = useCallback(async (activeFilters: ShiftDashboardFilters) => {
         setLoading(true);
         setFailed(false);
+
         try {
-            const summary = await fetchSummaryCounts(activeFilters);
-            setSummaryCounts(summary);
-            await fetchDashboardData(activeFilters, undefined, summary);
-            await fetchCreationTrends("YEARLY", activeFilters.createdDateFrom, activeFilters.createdDateTo);
+            await Promise.all([
+                fetchDashboardData(),
+                fetchCreationTrends("YEARLY", activeFilters.createdDateFrom, activeFilters.createdDateTo)
+            ]);
         } catch (err) {
             if (!isCancel(err)) {
-                console.error("Failed to load dashboard summary:", err);
+                console.error("Failed to load dashboard:", err);
                 setFailed(true);
-                setLoading(false);
-                setRefreshing(false);
             }
         }
-    }, [fetchSummaryCounts, fetchDashboardData]);
+    }, [fetchDashboardData]);
 
     // Run the initial Dashboard load only once when this component is mounted.
     useEffect(() => {
@@ -200,7 +152,7 @@ export default function ShiftDashboard() {
         const nextFilters = { ...filters };
         setLoading(true);
         setAppliedFilters(nextFilters);
-        void fetchDashboardData(nextFilters, undefined, summaryCounts ?? undefined);
+        void fetchDashboardData();
         void fetchCreationTrends(trendLevel, nextFilters.createdDateFrom, nextFilters.createdDateTo);
     };
 
@@ -209,7 +161,7 @@ export default function ShiftDashboard() {
         setLoading(true);
         setFilters(def);
         setAppliedFilters(def);
-        void fetchDashboardData(def, undefined, summaryCounts ?? undefined);
+        void fetchDashboardData();
         void fetchCreationTrends(trendLevel, def.createdDateFrom, def.createdDateTo);
     };
 
@@ -363,7 +315,7 @@ export default function ShiftDashboard() {
                     setLoading(true);
                     setFilters(nextFilters);
                     setAppliedFilters(nextFilters);
-                    void fetchDashboardData(nextFilters, undefined, summaryCounts ?? undefined);
+                    void fetchDashboardData();
                     if (type === "total") void fetchCreationTrends("YEARLY", "", "");
                 }}
             />

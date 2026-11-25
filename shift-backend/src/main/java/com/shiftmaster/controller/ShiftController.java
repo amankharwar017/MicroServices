@@ -1,6 +1,8 @@
 package com.shiftmaster.controller;
 
 import com.shiftmaster.dto.ApiResponseDto;
+import com.shiftmaster.dto.DropdownOptionsDto;
+import com.shiftmaster.dto.ShiftDashboardCountDto;
 import com.shiftmaster.dto.ShiftHistoryResponseDto;
 import com.shiftmaster.dto.ShiftRequestDto;
 import com.shiftmaster.dto.ShiftResponseDto;
@@ -10,7 +12,6 @@ import com.shiftmaster.service.ShiftHistoryService;
 import com.shiftmaster.service.ShiftNotificationService;
 import com.shiftmaster.service.ShiftService;
 import jakarta.validation.Valid;
-import com.shiftmaster.dto.DropdownOptionsDto;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -28,11 +30,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.security.access.prepost.PreAuthorize;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.time.LocalDate;
 
 
 @RequiredArgsConstructor
@@ -59,7 +60,7 @@ public class ShiftController {
 
 
     @GetMapping("list")
-    public ResponseEntity<Page<ShiftResponseDto>> getAllShifts(@ParameterObject @PageableDefault(page = 0, size = 10) Pageable pageable) {
+    public ResponseEntity<Page<ShiftResponseDto>> getAllShifts(@ParameterObject @PageableDefault() Pageable pageable) {
         return ResponseEntity.ok(shiftService.getAllShifts(pageable));
     }
 
@@ -71,7 +72,7 @@ public class ShiftController {
 
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     @PostMapping("search")
-    public ResponseEntity<Page<ShiftResponseDto>> searchShifts(@ParameterObject @ModelAttribute ShiftSearchRequestDto request, @ParameterObject @PageableDefault(page = 0, size = 10) Pageable pageable) {
+    public ResponseEntity<Page<ShiftResponseDto>> searchShifts(@ParameterObject @ModelAttribute ShiftSearchRequestDto request, @ParameterObject @PageableDefault() Pageable pageable) {
         return ResponseEntity.ok(shiftService.searchShifts(request, pageable));
     }
 
@@ -83,7 +84,7 @@ public class ShiftController {
 
 
     @GetMapping("/notifications")
-    public ResponseEntity<Map<String, Object>> getNotifications(@PageableDefault(size = 10) Pageable pageable) {
+    public ResponseEntity<Map<String, Object>> getNotifications(@PageableDefault() Pageable pageable) {
         return ResponseEntity.ok(shiftNotificationService.getNotificationData(pageable));
     }
 
@@ -121,6 +122,11 @@ public class ShiftController {
     public ResponseEntity<List<String>> validateShift(
             @RequestBody Map<String, Object> request) {
         return ResponseEntity.ok(shiftService.validateSingleShift(request));
+    }
+
+    @GetMapping("/dashboard-counts")
+    public ResponseEntity<ShiftDashboardCountDto> getDashboardCounts() {
+        return ResponseEntity.ok(shiftService.getDashboardCounts());
     }
 
 }

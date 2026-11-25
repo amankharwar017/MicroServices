@@ -4,10 +4,10 @@ import CloseIcon from "@mui/icons-material/Close";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import type { MRT_ColumnDef, MRT_Row } from "material-react-table";
 import ExcelJS from "exceljs";
-import { shiftResponseHeaders } from "../types/shift";
-import Table from "./Table";
-import ShiftHistory from "../app/activity/shift-history";
-import type { ShiftResponse } from "../types/shift";
+import { shiftResponseHeaders } from "../../types/shift";
+import Table from "../../components/Table";
+import ShiftHistory from "./shift-history";
+import type { ShiftResponse } from "../../types/shift";
 
 export type ShiftDrilldownDialogProps = {
     open: boolean;

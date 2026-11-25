@@ -1,11 +1,14 @@
 package com.shiftmaster.service;
 
 import com.shiftmaster.dto.ApiResponseDto;
+import com.shiftmaster.dto.ShiftDashboardCountDto;
 import com.shiftmaster.dto.ShiftRequestDto;
 import com.shiftmaster.dto.ShiftResponseDto;
 import com.shiftmaster.dto.ShiftSearchRequestDto;
 import com.shiftmaster.entity.Shift;
+import com.shiftmaster.exception.ShiftNotFoundException;
 import com.shiftmaster.mapper.ShiftMapper;
+import com.shiftmaster.repository.ShiftDashboardRepository;
 import com.shiftmaster.repository.ShiftRepository;
 import com.shiftmaster.util.ShiftUtil;
 import com.shiftmaster.validator.ShiftValidator;
@@ -43,6 +46,7 @@ public class ShiftService {
     private final ShiftHistoryService shiftHistoryService;
     private final ObjectMapper objectMapper;
     private final Validator beanValidator;
+    private final ShiftDashboardRepository shiftDashboardRepository;
     private final ShiftEmailService shiftEmailService;
     private final ShiftNotificationService shiftNotificationService;
 
@@ -54,7 +58,7 @@ public class ShiftService {
             throw new IllegalArgumentException("At least one shift is required");
         List<ShiftResponseDto> savedShifts = requests.stream().map(request -> {
             boolean isNew = request.getId() == null;
-            Shift shift = isNew ? new Shift() : shiftRepository.findById(request.getId()).orElseThrow(() -> new IllegalArgumentException("Shift not found with id: " + request.getId()));
+            Shift shift = isNew ? new Shift() : shiftRepository.findById(request.getId()).orElseThrow(() -> new ShiftNotFoundException("Shift not found with id: " + request.getId()));
             ShiftResponseDto oldValues = isNew ? null : shiftMapper.toResponse(shift);
             String operation = isNew ? "CREATE" : !oldValues.isStatus() && Boolean.TRUE.equals(request.getStatus()) ? "REACTIVATED" : "UPDATE";
             if (isNew)
@@ -75,7 +79,7 @@ public class ShiftService {
             return response;
         }).toList();
         boolean hasUpdate = requests.stream().anyMatch(request -> request.getId() != null);
-        String operation = requests.size() == 1 && hasUpdate && !savedShifts.get(0).isStatus() ? "UPDATE" : requests.size() == 1 && hasUpdate && savedShifts.getFirst().isStatus() ? "REACTIVATED" : "UPDATE";
+        String operation = requests.size() == 1 && hasUpdate && !savedShifts.getFirst().isStatus() ? "UPDATE" : requests.size() == 1 && hasUpdate ? "REACTIVATED" : "UPDATE";
         if (requests.size() == 1 && hasUpdate) {
             return ResponseEntity.ok(new ApiResponseDto(HttpStatus.OK.value(), "REACTIVATED".equals(operation) ? "Shift reactivated successfully" : "Shift updated successfully"));
         }
@@ -86,7 +90,7 @@ public class ShiftService {
     @Transactional
     @CacheEvict(value = "shiftList", allEntries = true)
     public ResponseEntity<ApiResponseDto> deleteShift(Long id) {
-        Shift shift = shiftRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Shift not found with id: " + id));
+        Shift shift = shiftRepository.findById(id).orElseThrow(() -> new ShiftNotFoundException("Shift not found with id: " + id));
         if (shift.isDeleted()) throw new IllegalArgumentException("Shift is already deleted");
         ShiftResponseDto oldValues = shiftMapper.toResponse(shift);
         shift.setStatus(false);
@@ -114,7 +118,7 @@ public class ShiftService {
 
     @Cacheable(value = "shiftById", key = "#id")
     public ShiftResponseDto getShiftById(Long id) {
-        Shift shift = shiftRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Shift not found with id: " + id));
+        Shift shift = shiftRepository.findById(id).orElseThrow(() -> new ShiftNotFoundException("Shift not found with id: " + id));
         return shiftMapper.toResponse(shift);
     }
 
@@ -126,14 +130,14 @@ public class ShiftService {
 
 
     public List<Map<String, Object>> getCreationTrends(String level, LocalDate dateFrom, LocalDate dateTo) {
-        List<Object[]> results;
+        List<ShiftRepository.CreationTrend> results;
         return switch (level.toUpperCase()) {
             case "YEARLY" -> {
                 results = shiftRepository.getYearlyCreationTrends(dateFrom, dateTo);
                 yield results.stream().map(row -> {
                     Map<String, Object> data = new HashMap<>();
-                    data.put("month", String.valueOf(row[0]));
-                    data.put("count", ((Number) row[1]).longValue());
+                    data.put("month", row.getPeriod());
+                    data.put("count", row.getCount());
                     return data;
                 }).toList();
             }
@@ -141,10 +145,8 @@ public class ShiftService {
                 results = shiftRepository.getMonthlyCreationTrends(dateFrom, dateTo);
                 yield results.stream().map(row -> {
                     Map<String, Object> data = new HashMap<>();
-                    int year = ((Number) row[0]).intValue();
-                    int month = ((Number) row[1]).intValue();
-                    data.put("month", String.format("%04d-%02d", year, month));
-                    data.put("count", ((Number) row[2]).longValue());
+                    data.put("month", row.getPeriod());
+                    data.put("count", row.getCount());
                     return data;
                 }).toList();
             }
@@ -152,10 +154,8 @@ public class ShiftService {
                 results = shiftRepository.getWeeklyCreationTrends(dateFrom, dateTo);
                 yield results.stream().map(row -> {
                     Map<String, Object> data = new HashMap<>();
-                    int year = ((Number) row[0]).intValue();
-                    int week = ((Number) row[1]).intValue();
-                    data.put("month", String.format("%04d-W%02d", year, week));
-                    data.put("count", ((Number) row[2]).longValue());
+                    data.put("month", row.getPeriod());
+                    data.put("count", row.getCount());
                     return data;
                 }).toList();
             }
@@ -163,8 +163,8 @@ public class ShiftService {
                 results = shiftRepository.getDailyCreationTrends(dateFrom, dateTo);
                 yield results.stream().map(row -> {
                     Map<String, Object> data = new HashMap<>();
-                    data.put("month", row[0].toString());
-                    data.put("count", ((Number) row[1]).longValue());
+                    data.put("month", row.getPeriod());
+                    data.put("count", row.getCount());
                     return data;
                 }).toList();
             }
@@ -172,6 +172,10 @@ public class ShiftService {
         };
     }
 
+    @Transactional(readOnly = true)
+    public ShiftDashboardCountDto getDashboardCounts() {
+        return shiftDashboardRepository.getDashboardCounts();
+    }
 
 
     public List<String> validateSingleShift(Map<String, Object> row) {
@@ -218,7 +222,6 @@ public class ShiftService {
         }
         return new ArrayList<>(errors);
     }
-
 
 
 }

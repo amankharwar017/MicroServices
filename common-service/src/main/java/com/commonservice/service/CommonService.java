@@ -26,7 +26,7 @@ public class CommonService {
     public byte[] downloadShiftTemplate() throws IOException {
         try (Workbook workbook = new XSSFWorkbook();
              ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-             Sheet sheet = workbook.createSheet("Shift Template");
+            Sheet sheet = workbook.createSheet("Shift Template");
 
             Row headerRow = sheet.createRow(0);
             String[] headers = {
@@ -48,13 +48,14 @@ public class CommonService {
         if (requests == null || requests.isEmpty()) {
             return results;
         }
-         results = IntStream.range(0, requests.size()).mapToObj(index -> {Map<String, Object> row = requests.get(index);
-                    List<String> errors = row == null ? List.of("Record: Record is required") : shiftFeignClient.validateShift(row);
-                    Map<String, Object> result = new LinkedHashMap<>();
-                    result.put("rowNumber", index + 2);
-                    result.put("errors", errors);
-                    return result;
-                }).toList();
+        results = IntStream.range(0, requests.size()).mapToObj(index -> {
+            Map<String, Object> row = requests.get(index);
+            List<String> errors = row == null ? List.of("Record: Record is required") : shiftFeignClient.validateShift(row);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("rowNumber", index + 2);
+            result.put("errors", errors);
+            return result;
+        }).toList();
 
         return results;
     }

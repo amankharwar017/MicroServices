@@ -158,7 +158,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
                     setTotalRows(response.data?.totalElements ?? 0);
                 }
             } else {
-                const response = await getShiftList(paginationModel.page, paginationModel.pageSize, sort);
+                const response = await searchShifts({} ,paginationModel.page, paginationModel.pageSize, sort);
                 dispatch(setShifts(response.data?.content ?? []));
                 setTotalRows(response.data?.totalElements ?? 0);
             }

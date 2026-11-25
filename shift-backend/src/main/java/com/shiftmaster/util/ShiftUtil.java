@@ -13,7 +13,6 @@ import tools.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -43,17 +42,19 @@ public class ShiftUtil {
     }
 
     public Specification<Shift> createShiftSearchSpecification(ShiftSearchRequestDto request) {
-        Specification<Shift> specification = (root, query, cb) -> {
+        Specification<Shift> specification;
+        specification = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
             if (StringUtils.hasText(request.getShiftCode()))
-                predicates.add(cb.like(cb.lower(root.<String>get("shiftCode")), "%" + request.getShiftCode().toLowerCase() + "%"));
+                predicates.add(cb.like(cb.lower(root.get("shiftCode")), "%" + request.getShiftCode().toLowerCase() + "%"));
             if (StringUtils.hasText(request.getShiftName()))
-                predicates.add(cb.like(cb.lower(root.<String>get("shiftName")), "%" + request.getShiftName().toLowerCase() + "%"));
-            if (request.getShiftType() != null && !request.getShiftType().isEmpty()) predicates.add(root.get("shiftType").in(request.getShiftType().stream().map(String::toUpperCase).toList()));
+                predicates.add(cb.like(cb.lower(root.get("shiftName")), "%" + request.getShiftName().toLowerCase() + "%"));
+            if (request.getShiftType() != null && !request.getShiftType().isEmpty())
+                predicates.add(root.get("shiftType").in(request.getShiftType().stream().map(String::toUpperCase).toList()));
             if (request.getCreatedDateFrom() != null)
-                predicates.add(cb.greaterThanOrEqualTo(root.<LocalDateTime>get("createdAt"), request.getCreatedDateFrom().atStartOfDay()));
+                predicates.add(cb.greaterThanOrEqualTo(root.get("createdAt"), request.getCreatedDateFrom().atStartOfDay()));
             if (request.getCreatedDateTo() != null)
-                predicates.add(cb.lessThan(root.<LocalDateTime>get("createdAt"), request.getCreatedDateTo().plusDays(1).atStartOfDay()));
+                predicates.add(cb.lessThan(root.get("createdAt"), request.getCreatedDateTo().plusDays(1).atStartOfDay()));
             if (request.getStatus() != null)
                 predicates.add(cb.equal(root.<Boolean>get("status"), request.getStatus()));
             if (request.getNightShift() != null)
