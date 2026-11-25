@@ -48,7 +48,7 @@ public class ShiftDashboardRepository {
                 inactiveCount
         );
 
-        query.where(cb.isFalse(root.get("deleted")));
+        query.where(cb.isFalse(root.get("isDeleted")));
         query.groupBy(root.get("shiftType"));
         query.orderBy(cb.asc(root.get("shiftType")));
 
@@ -93,7 +93,7 @@ public class ShiftDashboardRepository {
         query.select(cb.count(root));
 
         var predicates = cb.and(
-                cb.isFalse(root.get("deleted"))
+                cb.isFalse(root.get("isDeleted"))
         );
 
         if (night) {

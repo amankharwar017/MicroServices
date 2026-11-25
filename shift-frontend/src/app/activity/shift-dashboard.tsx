@@ -34,7 +34,6 @@ const defaultFilters = (): ShiftDashboardFilters => ({
 export default function ShiftDashboard() {
     const [engine, setEngine] = useState<ChartEngine>("recharts");
     const [analytics, setAnalytics] = useState<ShiftAnalytics | null>(null);
-    const [allShifts, setAllShifts] = useState<ShiftResponse[]>([]);
     const [loading, setLoading] = useState(true);
     const [failed, setFailed] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -46,6 +45,7 @@ export default function ShiftDashboard() {
     const [trendLevel, setTrendLevel] = useState<"YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY">("YEARLY");
     const [drilldown, setDrilldown] = useState<DrilldownPayload | null>(null);
     const [drilldownShifts, setDrilldownShifts] = useState<ShiftResponse[]>([]);
+    const [drilldownLoading, setDrilldownLoading] = useState(false);
     const [drilldownOpen, setDrilldownOpen] = useState(false);
     const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -58,32 +58,6 @@ export default function ShiftDashboard() {
         setTrendLevel(level);
         setAnalytics(prev => prev ? { ...prev, creationTrends: response.data ?? [] } : prev);
     };
-
-    // // Fetch the 3 summary APIs used when Dashboard is opened/refreshed.
-    // const fetchSummaryCounts = useCallback(async (activeFilters: ShiftDashboardFilters) => {
-    //     const countFilters: Record<string, unknown> = {};
-
-    //     if (activeFilters.shiftTypes && activeFilters.shiftTypes.length > 0) {
-    //         countFilters.shiftType = activeFilters.shiftTypes;
-    //     }
-
-    //     const [activeResponse, inactiveResponse, nightResponse] = await Promise.all([
-    //         searchShifts({ ...countFilters, status: true }, 0, 1, "id,asc"),
-    //         searchShifts({ ...countFilters, status: false }, 0, 1, "id,asc"),
-    //         searchShifts({ ...countFilters, nightShift: true }, 0, 1, "id,asc")
-    //     ]);
-
-    //     const active = activeResponse.data?.totalElements ?? 0;
-    //     const inactive = inactiveResponse.data?.totalElements ?? 0;
-    //     const night = nightResponse.data?.totalElements ?? 0;
-
-    //     return {
-    //         total: active + inactive,
-    //         active,
-    //         inactive,
-    //         night
-    //     };
-    // }, []);
 
     // One API call for the actual dashboard data.
     const fetchDashboardData = useCallback(async () => {
@@ -118,7 +92,7 @@ export default function ShiftDashboard() {
         }
     }, []);
 
-    // Dashboard entry = 3 summary APIs + 1 dashboard data API.
+    // Dashboard entry = 2 API calls: dashboard-counts + creation-trends.
     const loadInitialDashboard = useCallback(async (activeFilters: ShiftDashboardFilters) => {
         setLoading(true);
         setFailed(false);
@@ -177,35 +151,66 @@ export default function ShiftDashboard() {
     };
 
     // ----------------- Drilldown Click Handlers -----------------
-    const handleDrilldown = useCallback((payload: DrilldownPayload) => {
+    // Fetches only the needed data from backend via search API when user clicks a count
+    const handleDrilldown = useCallback(async (payload: DrilldownPayload) => {
         setDrilldown(payload);
-        let filtered = [...allShifts];
-        if (payload.source === "tile") {
-            if (payload.value === "active") {
-                filtered = filtered.filter(s => Boolean(s.status) && !Boolean(s.isDeleted));
-            } else if (payload.value === "inactive") {
-                filtered = filtered.filter(s => !Boolean(s.status) || Boolean(s.isDeleted));
-            }
-        } else if (payload.source === "status") {
-            const isAct = String(payload.value).toLowerCase() === "active";
-            filtered = filtered.filter(s => isAct ? Boolean(s.status) : !Boolean(s.status));
-        } else if (payload.source === "type") {
-            filtered = filtered.filter(s => (s.shiftType || "Unspecified") === payload.value);
-            if (payload.field === "active") {
-                filtered = filtered.filter(s => Boolean(s.status) && !Boolean(s.isDeleted));
-            } else if (payload.field === "inactive") {
-                filtered = filtered.filter(s => !Boolean(s.status) || Boolean(s.isDeleted));
-            }
-        } else if (payload.source === "night") {
-            const isNight = payload.value === "Night Shift";
-            filtered = filtered.filter(s => isNight ? Boolean(s.nightShift) : !Boolean(s.nightShift));
-        } else if (payload.source === "trends") {
-            const dateStr = String(payload.value ?? "");
-            filtered = filtered.filter(s => s.createdAt && s.createdAt.startsWith(dateStr));
-        }
-        setDrilldownShifts(filtered);
+        setDrilldownShifts([]);
+        setDrilldownLoading(true);
         setDrilldownOpen(true);
-    }, [allShifts]);
+
+        try {
+            const searchParams: Record<string, unknown> = {};
+            const count = payload.count ?? 100;
+            // Fetch exactly as many records as the count says
+            const size = count > 0 ? count : 10;
+
+            if (payload.source === "status") {
+                // Active or Inactive shifts
+                const isActive = String(payload.value).toLowerCase() === "active";
+                searchParams.status = isActive;
+            } else if (payload.source === "type") {
+                // Shifts by a specific type
+                searchParams.shiftType = [payload.value];
+                if (payload.field === "active") {
+                    searchParams.status = true;
+                } else if (payload.field === "inactive") {
+                    searchParams.status = false;
+                }
+            } else if (payload.source === "night") {
+                // Night or Day shifts
+                const isNight = payload.value === "Night Shift";
+                searchParams.nightShift = isNight;
+            } else if (payload.source === "trends") {
+                // Shifts created on a specific date/period — pass date range
+                const dateStr = String(payload.value ?? "");
+                if (dateStr.length === 4) {
+                    // Year like "2026"
+                    searchParams.createdDateFrom = `${dateStr}-01-01`;
+                    searchParams.createdDateTo = `${dateStr}-12-31`;
+                } else if (dateStr.length === 7) {
+                    // Month like "2026-11"
+                    searchParams.createdDateFrom = `${dateStr}-01`;
+                    const lastDay = dayjs(dateStr, "YYYY-MM").endOf("month").format("YYYY-MM-DD");
+                    searchParams.createdDateTo = lastDay;
+                } else if (dateStr.length === 10) {
+                    // Exact date like "2026-11-25"
+                    searchParams.createdDateFrom = dateStr;
+                    searchParams.createdDateTo = dateStr;
+                }
+            }
+            // source === "tile" with no specific value = total shifts (no extra filters)
+
+            const response = await searchShifts(searchParams, 0, size, "id,asc");
+            setDrilldownShifts(response.data?.content ?? []);
+        } catch (err) {
+            if (!isCancel(err)) {
+                console.error("Failed to fetch drilldown data:", err);
+                setDrilldownShifts([]);
+            }
+        } finally {
+            setDrilldownLoading(false);
+        }
+    }, []);
 
     // ----------------- Format Table Data for Cards -----------------
     // 1. Shift Creation Trends Table Data
@@ -307,16 +312,15 @@ export default function ShiftDashboard() {
                 night={summaryCounts?.night ?? 0}
                 activeStatusFilter={activeTileStatus}
                 onTileClick={type => {
-                    let nextFilters: ShiftDashboardFilters = { ...appliedFilters };
-                    if (type === "total") nextFilters = { ...nextFilters, status: [], nightShift: [], shiftTypes: [], createdDateFrom: "", createdDateTo: "" };
-                    else if (type === "active") nextFilters = { ...nextFilters, status: ["Active"], nightShift: [] };
-                    else if (type === "inactive") nextFilters = { ...nextFilters, status: ["Inactive"], nightShift: [] };
-                    else if (type === "night") nextFilters = { ...nextFilters, status: [], nightShift: ["Yes"] };
-                    setLoading(true);
-                    setFilters(nextFilters);
-                    setAppliedFilters(nextFilters);
-                    void fetchDashboardData();
-                    if (type === "total") void fetchCreationTrends("YEARLY", "", "");
+                    if (type === "total") {
+                        void handleDrilldown({ source: "tile", title: "All Shifts", label: "Total", value: "total", count: summaryCounts?.total ?? 0 });
+                    } else if (type === "active") {
+                        void handleDrilldown({ source: "status", title: "Active Shifts", label: "Active", value: "Active", count: summaryCounts?.active ?? 0 });
+                    } else if (type === "inactive") {
+                        void handleDrilldown({ source: "status", title: "Inactive Shifts", label: "Inactive", value: "Inactive", count: summaryCounts?.inactive ?? 0 });
+                    } else if (type === "night") {
+                        void handleDrilldown({ source: "night", title: "Night Shift Records", label: "Night Shift", value: "Night Shift", count: summaryCounts?.night ?? 0 });
+                    }
                 }}
             />
             {/* Search Filters Card */}
@@ -339,7 +343,7 @@ export default function ShiftDashboard() {
                         subtitle="Growth trajectory and timeline distribution"
                         tableColumns={[{ key: "category", label: "Date / Period" }, { key: "count", label: "Shifts Created", isCount: true }]}
                         tableData={trendsTableData}
-                        onCountClick={row => { handleDrilldown({ source: "trends", title: `Shifts Created on ${row.category}`, label: String(row.category), value: String(row.category), count: Number(row.count ?? 0) }); }}  >
+                        onCountClick={row => { void handleDrilldown({ source: "trends", title: `Shifts Created on ${row.category}`, label: String(row.category), value: String(row.category), count: Number(row.count ?? 0) }); }}  >
                         <ColumnChart
                             title="Shift Creation Trends"
                             data={analytics.creationTrends}
@@ -348,7 +352,7 @@ export default function ShiftDashboard() {
                             drillDown
                             engine={engine}
                             onTrendLevelChange={fetchCreationTrends}
-                            onBarClick={cat => { handleDrilldown({ source: "trends", title: `Shifts Created on ${cat}`, label: cat, value: cat }); }}
+                            onBarClick={cat => { void handleDrilldown({ source: "trends", title: `Shifts Created on ${cat}`, label: cat, value: cat }); }}
                         />
                     </DashboardChartCard>
                     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" }, gap: 2.5 }}>
@@ -362,7 +366,7 @@ export default function ShiftDashboard() {
                                 { key: "percentage", label: "Share" }
                             ]}
                             tableData={typeTableData}
-                            onCountClick={row => { handleDrilldown({ source: "type", title: `Shifts — ${row.category}`, label: String(row.category), value: String(row.category), count: Number(row.count ?? 0) }); }}
+                            onCountClick={row => { void handleDrilldown({ source: "type", title: `Shifts — ${row.category}`, label: String(row.category), value: String(row.category), count: Number(row.count ?? 0) }); }}
                         >
                             <ColumnChart
                                 title="Shifts by Type"
@@ -370,7 +374,7 @@ export default function ShiftDashboard() {
                                 categoryField="category"
                                 valueFields={[{ field: "count", name: "Shifts", color: "#2563eb" }]}
                                 engine={engine}
-                                onBarClick={cat => { handleDrilldown({ source: "type", title: `Shifts — ${cat}`, label: cat, value: cat }); }}
+                                onBarClick={cat => { void handleDrilldown({ source: "type", title: `Shifts — ${cat}`, label: cat, value: cat }); }}
                             />
                         </DashboardChartCard>
                         <DashboardChartCard
@@ -378,7 +382,7 @@ export default function ShiftDashboard() {
                             subtitle="Active vs inactive shift ratio"
                             tableColumns={[{ key: "category", label: "Category" }, { key: "count", label: "Count", isCount: true }, { key: "percentage", label: "Percentage" }]}
                             tableData={statusTableData}
-                            onCountClick={row => { handleDrilldown({ source: "status", title: `${row.category} Shifts`, label: String(row.category), value: String(row.category), count: Number(row.count ?? 0) }); }}
+                            onCountClick={row => { void handleDrilldown({ source: "status", title: `${row.category} Shifts`, label: String(row.category), value: String(row.category), count: Number(row.count ?? 0) }); }}
                         >
                             <GaugeChart
                                 title="Active Share"
@@ -386,7 +390,7 @@ export default function ShiftDashboard() {
                                 max={100}
                                 suffix="% Active"
                                 engine={engine}
-                                onClick={() => { handleDrilldown({ source: "status", title: "Active Shifts", label: "Active", value: "Active", count: analytics.active }); }}
+                                onClick={() => { void handleDrilldown({ source: "status", title: "Active Shifts", label: "Active", value: "Active", count: analytics.active }); }}
                             />
                         </DashboardChartCard>
                         {/* Chart 4: Active vs Inactive by Shift Type */}
@@ -403,7 +407,7 @@ export default function ShiftDashboard() {
                             onCountClick={(row, fieldKey) => {
                                 const isAct = fieldKey === "active";
                                 const isTot = fieldKey === "count";
-                                handleDrilldown({ source: "type", title: `${isTot ? "All" : isAct ? "Active" : "Inactive"} Shifts in ${row.category}`, label: String(row.category), value: String(row.category), field: isTot ? undefined : fieldKey, count: Number(row[fieldKey] ?? 0) });
+                                void handleDrilldown({ source: "type", title: `${isTot ? "All" : isAct ? "Active" : "Inactive"} Shifts in ${row.category}`, label: String(row.category), value: String(row.category), field: isTot ? undefined : fieldKey, count: Number(row[fieldKey] ?? 0) });
                             }}
                         >
                             <ColumnChart
@@ -420,7 +424,7 @@ export default function ShiftDashboard() {
                                 ]}
                                 stacked
                                 engine={engine}
-                                onBarClick={(cat, field) => { handleDrilldown({ source: "type", title: `${field === "inactive" ? "Inactive" : "Active"} Shifts in ${cat}`, label: cat, value: cat, field }); }}
+                                onBarClick={(cat, field) => { void handleDrilldown({ source: "type", title: `${field === "inactive" ? "Inactive" : "Active"} Shifts in ${cat}`, label: cat, value: cat, field }); }}
                             />
                         </DashboardChartCard>
                         {/* Chart 5: Night Shift Distribution */}
@@ -433,7 +437,7 @@ export default function ShiftDashboard() {
                                 { key: "percentage", label: "Share" }
                             ]}
                             tableData={nightTableData}
-                            onCountClick={row => { handleDrilldown({ source: "night", title: `${row.category} Records`, label: String(row.category), value: String(row.category), count: Number(row.count ?? 0) }); }}
+                            onCountClick={row => { void handleDrilldown({ source: "night", title: `${row.category} Records`, label: String(row.category), value: String(row.category), count: Number(row.count ?? 0) }); }}
                         >
                             <PieChart
                                 title="Night Shift Distribution"
@@ -443,7 +447,7 @@ export default function ShiftDashboard() {
                                 categoryField="category"
                                 valueField="count"
                                 engine={engine}
-                                onSliceClick={cat => { handleDrilldown({ source: "night", title: `${cat} Records`, label: cat, value: cat }); }}
+                                onSliceClick={cat => { void handleDrilldown({ source: "night", title: `${cat} Records`, label: cat, value: cat }); }}
                             />
                         </DashboardChartCard>
                     </Box>
@@ -456,6 +460,7 @@ export default function ShiftDashboard() {
                 title={drilldown?.title ?? "Shift Records"}
                 subtitle={drilldown ? `Filtered by ${drilldown.label}` : undefined}
                 shifts={drilldownShifts}
+                loading={drilldownLoading}
             />
         </>
     );
