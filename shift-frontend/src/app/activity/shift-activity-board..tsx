@@ -87,7 +87,8 @@ const renderShiftValue = (shift: ShiftResponse, key: keyof ShiftResponse) => {
     if (key === "createdAt" || key === "updatedAt") {
         if (!value) return "N/a";
         const [date, time] = String(value).split("T");
-        return <>{date}<br />{time?.split(".")[0]}</>;
+        const [year, month, day] = date.split("-");
+        return <>{`${day}-${month}-${year}`}<br />{time?.split(".")[0]}</>;
     }
     if (value === null || value === undefined || value === "") return "N/a";
     if (value instanceof Set || Array.isArray(value)) return [...value].join(", ");
@@ -158,7 +159,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
                     setTotalRows(response.data?.totalElements ?? 0);
                 }
             } else {
-                const response = await searchShifts({} ,paginationModel.page, paginationModel.pageSize, sort);
+                const response = await searchShifts({}, paginationModel.page, paginationModel.pageSize, sort);
                 dispatch(setShifts(response.data?.content ?? []));
                 setTotalRows(response.data?.totalElements ?? 0);
             }
