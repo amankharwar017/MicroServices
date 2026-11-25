@@ -183,9 +183,8 @@ export default function ShiftDashboard() {
         const nextFilters = { ...filters };
         setLoading(true);
         setAppliedFilters(nextFilters);
-        // Re-fetch counts, search data for charts, and trend data
+        // Only search + creation trends — counts sirf initial load pe chalti hai
         void Promise.all([
-            fetchDashboardCounts(),
             fetchSearchForCharts(nextFilters),
             fetchCreationTrends(trendLevel, nextFilters.createdDateFrom, nextFilters.createdDateTo)
         ]).finally(() => { setLoading(false); });
@@ -196,8 +195,8 @@ export default function ShiftDashboard() {
         setLoading(true);
         setFilters(def);
         setAppliedFilters(def);
+        // Only search + creation trends — counts sirf initial load pe chalti hai
         void Promise.all([
-            fetchDashboardCounts(),
             fetchSearchForCharts(def),
             fetchCreationTrends(trendLevel, def.createdDateFrom, def.createdDateTo)
         ]).finally(() => { setLoading(false); });
