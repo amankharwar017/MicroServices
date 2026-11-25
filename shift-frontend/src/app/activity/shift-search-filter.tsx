@@ -142,7 +142,7 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
   };
 
   const formatFilterValue = (value: unknown): string => {
-    if (typeof value === "boolean") return value ? "Yes" : "No";
+    if (typeof value === "boolean") return value ? "Active" : "Inactive";
     if (Array.isArray(value)) return value.join(", ");
     if (value instanceof Set) return [...value].join(", ");
     return String(value);
@@ -204,14 +204,15 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
     lastSearchRef.current = key;
     onSearch(filters);
   };
-  const handleSearch = () => {
-    if (formDataRef.current.createdDateFrom && formDataRef.current.createdDateTo && formDataRef.current.createdDateFrom > formDataRef.current.createdDateTo) return;
-    const searchData = buildFilters(formDataRef.current, "date");
-    const searchKey = JSON.stringify(searchData);
-    if (lastSearchRef.current === searchKey) return;
-    onFiltersChange?.(searchData, handleRemoveFilter);
-    searchIfChanged(searchData);
-  };
+ const handleSearch = () => {
+  if (formDataRef.current.createdDateFrom && formDataRef.current.createdDateTo && formDataRef.current.createdDateFrom > formDataRef.current.createdDateTo) return;
+  const searchData = buildFilters(formDataRef.current, "date");
+  const searchKey = JSON.stringify(searchData);
+  if (lastSearchRef.current === searchKey) return;
+  onFiltersChange?.(searchData, handleRemoveFilter);
+  searchIfChanged(searchData);
+  if (!dashboardLayout) setShowMoreFilters(false);
+};
 
 
   const handleSummaryModeChange = (mode: "beginning" | "date") => {
