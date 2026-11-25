@@ -16,11 +16,19 @@ export type ShiftDrilldownDialogProps = {
     subtitle?: string;
     shifts: ShiftResponse[];
     loading?: boolean;
+    /** Server-side pagination props */
+    totalCount?: number;
+    page?: number;
+    pageSize?: number;
+    onPageChange?: (page: number, pageSize: number) => void;
 };
 
-export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, shifts, loading = false }: ShiftDrilldownDialogProps) {
+export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, shifts, loading = false, totalCount, page = 0, pageSize = 10, onPageChange }: ShiftDrilldownDialogProps) {
     const [historyShiftId, setHistoryShiftId] = useState<number | null>(null);
     const [historyShiftCode, setHistoryShiftCode] = useState<string>("");
+
+    const isServerPagination = typeof totalCount === "number" && typeof onPageChange === "function";
+    const displayCount = isServerPagination ? totalCount : shifts.length;
 
     const columns: MRT_ColumnDef<ShiftResponse>[] = useMemo(() => [
         {
@@ -135,7 +143,7 @@ export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, s
                     <Box>
                         <Stack direction="row" spacing={1.5} sx={{ alignItems: "center" }}>
                             <Typography variant="h6" sx={{ fontWeight: 800, color: "#0f172a" }}>{title}</Typography>
-                            <Chip label={`${shifts.length} ${shifts.length === 1 ? "Record" : "Records"}`} size="small" color="primary" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
+                            <Chip label={`${displayCount} ${displayCount === 1 ? "Record" : "Records"}`} size="small" color="primary" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
                         </Stack>
                         {subtitle && <Typography variant="body2" color="text.secondary">{subtitle}</Typography>}
                     </Box>
@@ -154,7 +162,20 @@ export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, s
                         maxHeight={520}
                         getRowId={(row) => String(row.id ?? row.shiftCode)}
                         tableOptions={{
-                            state: { isLoading: loading },
+                            state: {
+                                isLoading: loading,
+                                ...(isServerPagination ? { pagination: { pageIndex: page, pageSize } } : {})
+                            },
+                            manualPagination: isServerPagination,
+                            rowCount: isServerPagination ? totalCount : undefined,
+                            onPaginationChange: isServerPagination
+                                ? (updaterOrValue) => {
+                                    const newPagination = typeof updaterOrValue === "function"
+                                        ? updaterOrValue({ pageIndex: page, pageSize })
+                                        : updaterOrValue;
+                                    onPageChange?.(newPagination.pageIndex, newPagination.pageSize);
+                                }
+                                : undefined,
                             enableSorting: true,
                             enableColumnFilters: false,
                             enableGlobalFilter: true,

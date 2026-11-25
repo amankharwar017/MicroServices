@@ -31,6 +31,50 @@ const defaultFilters = (): ShiftDashboardFilters => ({
     createdDateTo: dayjs().format("YYYY-MM-DD")
 });
 
+/** Build search params object from the applied filters */
+const buildSearchParams = (filters: ShiftDashboardFilters): Record<string, unknown> => {
+    const params: Record<string, unknown> = {};
+    if (filters.shiftTypes.length > 0) params.shiftType = filters.shiftTypes;
+    if (filters.status.length === 1) params.status = filters.status[0] === "Active";
+    if (filters.nightShift.length === 1) params.nightShift = filters.nightShift[0] === "Yes";
+    if (filters.createdDateFrom) params.createdDateFrom = filters.createdDateFrom;
+    if (filters.createdDateTo) params.createdDateTo = filters.createdDateTo;
+    return params;
+};
+
+/** Compute chart analytics from the search API response content array */
+const computeAnalyticsFromSearchData = (shifts: ShiftResponse[]): Omit<ShiftAnalytics, "creationTrends"> => {
+    const total = shifts.length;
+    const active = shifts.filter(s => s.status === true).length;
+    const inactive = total - active;
+
+    // Shifts by type
+    const typeMap = new Map<string, { count: number; active: number; inactive: number }>();
+    shifts.forEach(s => {
+        const type = s.shiftType || "Unspecified";
+        const existing = typeMap.get(type) || { count: 0, active: 0, inactive: 0 };
+        existing.count++;
+        if (s.status) existing.active++; else existing.inactive++;
+        typeMap.set(type, existing);
+    });
+    const shiftsByType = Array.from(typeMap.entries()).map(([name, data]) => ({
+        name,
+        count: data.count,
+        active: data.active,
+        inactive: data.inactive
+    }));
+
+    // Night distribution
+    const nightCount = shifts.filter(s => s.nightShift === true).length;
+    const dayCount = total - nightCount;
+    const nightDistribution = [
+        { name: "Night Shift", count: nightCount },
+        { name: "Day Shift", count: dayCount }
+    ];
+
+    return { total, active, inactive, shiftsByType, nightDistribution };
+};
+
 export default function ShiftDashboard() {
     const [engine, setEngine] = useState<ChartEngine>("recharts");
     const [analytics, setAnalytics] = useState<ShiftAnalytics | null>(null);
@@ -47,68 +91,81 @@ export default function ShiftDashboard() {
     const [drilldownShifts, setDrilldownShifts] = useState<ShiftResponse[]>([]);
     const [drilldownLoading, setDrilldownLoading] = useState(false);
     const [drilldownOpen, setDrilldownOpen] = useState(false);
+    const [drilldownTotalCount, setDrilldownTotalCount] = useState(0);
+    const [drilldownPage, setDrilldownPage] = useState(0);
+    const [drilldownPageSize, setDrilldownPageSize] = useState(10);
+    const [drilldownSearchParams, setDrilldownSearchParams] = useState<Record<string, unknown>>({});
     const abortControllerRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
         void dispatch(fetchShiftDropdownOptions());
     }, [dispatch]);
 
+    // ---- API 2: Creation Trends ----
     const fetchCreationTrends = async (level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY", dateFrom = appliedFilters.createdDateFrom, dateTo = appliedFilters.createdDateTo) => {
         const response = await getCreationTrends(level, dateFrom, dateTo);
         setTrendLevel(level);
         setAnalytics(prev => prev ? { ...prev, creationTrends: response.data ?? [] } : prev);
     };
 
-    // One API call for the actual dashboard data.
-    const fetchDashboardData = useCallback(async () => {
-        setFailed(false);
+    // ---- API 1: Dashboard Counts (tiles only) ----
+    const fetchDashboardCounts = useCallback(async () => {
         try {
             const response = await getDashboardCounts();
             const data = response.data;
-
             setSummaryCounts({
                 total: data.total,
                 active: data.active,
                 inactive: data.inactive,
                 night: data.nightShift
             });
-
-            setAnalytics(prev => ({
-                total: data.total,
-                active: data.active,
-                inactive: data.inactive,
-                creationTrends: prev?.creationTrends ?? [],
-                shiftsByType: data.shiftsByType,
-                nightDistribution: data.nightDistribution
-            }));
         } catch (err) {
             if (!isCancel(err)) {
-                console.error("Failed to load shift dashboard data:", err);
-                setFailed(true);
+                console.error("Failed to load dashboard counts:", err);
             }
-        } finally {
-            setLoading(false);
-            setRefreshing(false);
         }
     }, []);
 
-    // Dashboard entry = 2 API calls: dashboard-counts + creation-trends.
+    // ---- API 3: Search (charts data) ----
+    const fetchSearchForCharts = useCallback(async (activeFilters: ShiftDashboardFilters) => {
+        try {
+            const params = buildSearchParams(activeFilters);
+            // Fetch a large page (up to 10000) so all filtered records come back for chart computation
+            const response = await searchShifts(params, 0, 10000, "id,asc");
+            const content: ShiftResponse[] = response.data?.content ?? [];
+            const chartData = computeAnalyticsFromSearchData(content);
+            setAnalytics(prev => ({
+                ...chartData,
+                creationTrends: prev?.creationTrends ?? []
+            }));
+        } catch (err) {
+            if (!isCancel(err)) {
+                console.error("Failed to load search data for charts:", err);
+            }
+        }
+    }, []);
+
+    // Dashboard entry = 3 API calls: dashboard-counts + creation-trends + search
     const loadInitialDashboard = useCallback(async (activeFilters: ShiftDashboardFilters) => {
         setLoading(true);
         setFailed(false);
 
         try {
             await Promise.all([
-                fetchDashboardData(),
-                fetchCreationTrends("YEARLY", activeFilters.createdDateFrom, activeFilters.createdDateTo)
+                fetchDashboardCounts(),
+                fetchCreationTrends("YEARLY", activeFilters.createdDateFrom, activeFilters.createdDateTo),
+                fetchSearchForCharts(activeFilters)
             ]);
         } catch (err) {
             if (!isCancel(err)) {
                 console.error("Failed to load dashboard:", err);
                 setFailed(true);
             }
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
         }
-    }, [fetchDashboardData]);
+    }, [fetchDashboardCounts, fetchSearchForCharts]);
 
     // Run the initial Dashboard load only once when this component is mounted.
     useEffect(() => {
@@ -126,8 +183,12 @@ export default function ShiftDashboard() {
         const nextFilters = { ...filters };
         setLoading(true);
         setAppliedFilters(nextFilters);
-        void fetchDashboardData();
-        void fetchCreationTrends(trendLevel, nextFilters.createdDateFrom, nextFilters.createdDateTo);
+        // Re-fetch counts, search data for charts, and trend data
+        void Promise.all([
+            fetchDashboardCounts(),
+            fetchSearchForCharts(nextFilters),
+            fetchCreationTrends(trendLevel, nextFilters.createdDateFrom, nextFilters.createdDateTo)
+        ]).finally(() => { setLoading(false); });
     };
 
     const handleResetFilters = () => {
@@ -135,8 +196,11 @@ export default function ShiftDashboard() {
         setLoading(true);
         setFilters(def);
         setAppliedFilters(def);
-        void fetchDashboardData();
-        void fetchCreationTrends(trendLevel, def.createdDateFrom, def.createdDateTo);
+        void Promise.all([
+            fetchDashboardCounts(),
+            fetchSearchForCharts(def),
+            fetchCreationTrends(trendLevel, def.createdDateFrom, def.createdDateTo)
+        ]).finally(() => { setLoading(false); });
     };
 
     const handleRefresh = () => {
@@ -150,67 +214,74 @@ export default function ShiftDashboard() {
         void loadInitialDashboard(def);
     };
 
-    // ----------------- Drilldown Click Handlers -----------------
-    // Fetches only the needed data from backend via search API when user clicks a count
-    const handleDrilldown = useCallback(async (payload: DrilldownPayload) => {
-        setDrilldown(payload);
-        setDrilldownShifts([]);
+    // ----------------- Drilldown (View Table) with Server-Side Pagination -----------------
+    const fetchDrilldownPage = useCallback(async (params: Record<string, unknown>, page: number, pageSize: number) => {
         setDrilldownLoading(true);
-        setDrilldownOpen(true);
-
         try {
-            const searchParams: Record<string, unknown> = {};
-            const count = payload.count ?? 100;
-            // Fetch exactly as many records as the count says
-            const size = count > 0 ? count : 10;
-
-            if (payload.source === "status") {
-                // Active or Inactive shifts
-                const isActive = String(payload.value).toLowerCase() === "active";
-                searchParams.status = isActive;
-            } else if (payload.source === "type") {
-                // Shifts by a specific type
-                searchParams.shiftType = [payload.value];
-                if (payload.field === "active") {
-                    searchParams.status = true;
-                } else if (payload.field === "inactive") {
-                    searchParams.status = false;
-                }
-            } else if (payload.source === "night") {
-                // Night or Day shifts
-                const isNight = payload.value === "Night Shift";
-                searchParams.nightShift = isNight;
-            } else if (payload.source === "trends") {
-                // Shifts created on a specific date/period — pass date range
-                const dateStr = String(payload.value ?? "");
-                if (dateStr.length === 4) {
-                    // Year like "2026"
-                    searchParams.createdDateFrom = `${dateStr}-01-01`;
-                    searchParams.createdDateTo = `${dateStr}-12-31`;
-                } else if (dateStr.length === 7) {
-                    // Month like "2026-11"
-                    searchParams.createdDateFrom = `${dateStr}-01`;
-                    const lastDay = dayjs(dateStr, "YYYY-MM").endOf("month").format("YYYY-MM-DD");
-                    searchParams.createdDateTo = lastDay;
-                } else if (dateStr.length === 10) {
-                    // Exact date like "2026-11-25"
-                    searchParams.createdDateFrom = dateStr;
-                    searchParams.createdDateTo = dateStr;
-                }
-            }
-            // source === "tile" with no specific value = total shifts (no extra filters)
-
-            const response = await searchShifts(searchParams, 0, size, "id,asc");
-            setDrilldownShifts(response.data?.content ?? []);
+            const response = await searchShifts(params, page, pageSize, "id,asc");
+            const pageData = response.data;
+            setDrilldownShifts(pageData?.content ?? []);
+            setDrilldownTotalCount(pageData?.totalElements ?? 0);
+            setDrilldownPage(page);
+            setDrilldownPageSize(pageSize);
         } catch (err) {
             if (!isCancel(err)) {
                 console.error("Failed to fetch drilldown data:", err);
                 setDrilldownShifts([]);
+                setDrilldownTotalCount(0);
             }
         } finally {
             setDrilldownLoading(false);
         }
     }, []);
+
+    const handleDrilldown = useCallback(async (payload: DrilldownPayload) => {
+        setDrilldown(payload);
+        setDrilldownShifts([]);
+        setDrilldownOpen(true);
+
+        const searchParams: Record<string, unknown> = {};
+
+        // Carry forward applied date filters
+        if (appliedFilters.createdDateFrom) searchParams.createdDateFrom = appliedFilters.createdDateFrom;
+        if (appliedFilters.createdDateTo) searchParams.createdDateTo = appliedFilters.createdDateTo;
+
+        if (payload.source === "status") {
+            const isActive = String(payload.value).toLowerCase() === "active";
+            searchParams.status = isActive;
+        } else if (payload.source === "type") {
+            searchParams.shiftType = [payload.value];
+            if (payload.field === "active") {
+                searchParams.status = true;
+            } else if (payload.field === "inactive") {
+                searchParams.status = false;
+            }
+        } else if (payload.source === "night") {
+            const isNight = payload.value === "Night Shift";
+            searchParams.nightShift = isNight;
+        } else if (payload.source === "trends") {
+            const dateStr = String(payload.value ?? "");
+            if (dateStr.length === 4) {
+                searchParams.createdDateFrom = `${dateStr}-01-01`;
+                searchParams.createdDateTo = `${dateStr}-12-31`;
+            } else if (dateStr.length === 7) {
+                searchParams.createdDateFrom = `${dateStr}-01`;
+                const lastDay = dayjs(dateStr, "YYYY-MM").endOf("month").format("YYYY-MM-DD");
+                searchParams.createdDateTo = lastDay;
+            } else if (dateStr.length === 10) {
+                searchParams.createdDateFrom = dateStr;
+                searchParams.createdDateTo = dateStr;
+            }
+        }
+
+        setDrilldownSearchParams(searchParams);
+        // Start from page 0, default page size 10
+        await fetchDrilldownPage(searchParams, 0, 10);
+    }, [appliedFilters, fetchDrilldownPage]);
+
+    const handleDrilldownPageChange = useCallback((page: number, pageSize: number) => {
+        void fetchDrilldownPage(drilldownSearchParams, page, pageSize);
+    }, [drilldownSearchParams, fetchDrilldownPage]);
 
     // ----------------- Format Table Data for Cards -----------------
     // 1. Shift Creation Trends Table Data
@@ -304,7 +375,7 @@ export default function ShiftDashboard() {
 
             {/* Error Banner */}
             {failed && (<Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>Failed to load dashboard data. Please verify your connection or try again. </Alert>)}
-            {/* KPI Stat Tiles */}
+            {/* KPI Stat Tiles — counts from dashboard-counts API only */}
             <DashboardStatTiles
                 total={summaryCounts?.total ?? 0}
                 active={summaryCounts?.active ?? 0}
@@ -356,7 +427,7 @@ export default function ShiftDashboard() {
                         />
                     </DashboardChartCard>
                     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" }, gap: 2.5 }}>
-                        {/* Chart 2: Shifts by Type */}
+                        {/* Chart 2: Shifts by Type — from search API data */}
                         <DashboardChartCard
                             title="Shifts by Type"
                             subtitle="Distribution across shift classifications"
@@ -393,7 +464,7 @@ export default function ShiftDashboard() {
                                 onClick={() => { void handleDrilldown({ source: "status", title: "Active Shifts", label: "Active", value: "Active", count: analytics.active }); }}
                             />
                         </DashboardChartCard>
-                        {/* Chart 4: Active vs Inactive by Shift Type */}
+                        {/* Chart 4: Active vs Inactive by Shift Type — from search API data */}
                         <DashboardChartCard
                             title="Active vs Inactive by Shift Type"
                             subtitle="Operational status distribution for each shift type"
@@ -427,7 +498,7 @@ export default function ShiftDashboard() {
                                 onBarClick={(cat, field) => { void handleDrilldown({ source: "type", title: `${field === "inactive" ? "Inactive" : "Active"} Shifts in ${cat}`, label: cat, value: cat, field }); }}
                             />
                         </DashboardChartCard>
-                        {/* Chart 5: Night Shift Distribution */}
+                        {/* Chart 5: Night Shift Distribution — from search API data */}
                         <DashboardChartCard
                             title="Night Shift Distribution"
                             subtitle="Night and day shift share"
@@ -453,7 +524,7 @@ export default function ShiftDashboard() {
                     </Box>
                 </Box>
             ) : null}
-            {/* Drilldown Records Dialog */}
+            {/* Drilldown Records Dialog — with server-side pagination */}
             <ShiftDrilldownDialog
                 open={drilldownOpen}
                 onClose={() => setDrilldownOpen(false)}
@@ -461,6 +532,10 @@ export default function ShiftDashboard() {
                 subtitle={drilldown ? `Filtered by ${drilldown.label}` : undefined}
                 shifts={drilldownShifts}
                 loading={drilldownLoading}
+                totalCount={drilldownTotalCount}
+                page={drilldownPage}
+                pageSize={drilldownPageSize}
+                onPageChange={handleDrilldownPageChange}
             />
         </>
     );
