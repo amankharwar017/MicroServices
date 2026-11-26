@@ -11,6 +11,7 @@ import DashboardStatTiles from "../../components/DashboardStatTiles";
 import ShiftDrilldownDialog from "./ShiftDrilldownDialog";
 import DashboardFilterBar from "./dashboard-filter";
 import { getDashboardCounts, getShiftAnalytics, searchShifts, getCreationTrends } from "../shift-api";
+import type { ShiftAnalyticsFilterParams } from "../shift-api";
 import type { ShiftResponse } from "../../types/shift";
 import type { ChartEngine, TableBreakdownRow, DrilldownPayload, ShiftAnalytics } from "../../types/chartTypes";
 import { useDispatch, useSelector } from "react-redux";
@@ -58,9 +59,24 @@ export default function ShiftDashboard() {
         void dispatch(fetchShiftDropdownOptions());
     }, [dispatch]);
 
+    const buildFilterParams = useCallback((activeFilters: ShiftDashboardFilters): ShiftAnalyticsFilterParams => {
+        const status = activeFilters.status.length === 1 ? activeFilters.status[0] === "Active" : undefined;
+        const nightShift = activeFilters.nightShift.length === 1 ? activeFilters.nightShift[0] === "Yes" : undefined;
+        return {
+            shiftType: activeFilters.shiftTypes.length ? activeFilters.shiftTypes : undefined,
+            status,
+            nightShift,
+            createdDateFrom: activeFilters.createdDateFrom || undefined,
+            createdDateTo: activeFilters.createdDateTo || undefined
+        };
+    }, []);
+
     // ---- API 2: Creation Trends ----
-    const fetchCreationTrends = async (level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY", dateFrom = appliedFilters.createdDateFrom, dateTo = appliedFilters.createdDateTo) => {
-        const response = await getCreationTrends(level, dateFrom, dateTo);
+    const fetchCreationTrends = async (
+        level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY",
+        activeFilters: ShiftDashboardFilters = appliedFilters
+    ) => {
+        const response = await getCreationTrends(level, buildFilterParams(activeFilters));
         setTrendLevel(level);
         setAnalytics(prev => prev ? { ...prev, creationTrends: response.data ?? [] } : prev);
     };
@@ -86,10 +102,7 @@ export default function ShiftDashboard() {
     // ---- API 3: Dashboard Analytics ----
     const fetchAnalytics = useCallback(async (activeFilters: ShiftDashboardFilters) => {
         try {
-            const response = await getShiftAnalytics(
-                activeFilters.createdDateFrom,
-                activeFilters.createdDateTo
-            );
+            const response = await getShiftAnalytics(buildFilterParams(activeFilters));
 
             const data = response.data;
 
@@ -129,7 +142,7 @@ export default function ShiftDashboard() {
         try {
             await Promise.all([
                 fetchDashboardCounts(),
-                fetchCreationTrends("YEARLY", activeFilters.createdDateFrom, activeFilters.createdDateTo),
+                fetchCreationTrends("YEARLY", activeFilters),
                 fetchAnalytics(activeFilters)
             ]);
         } catch (err) {
@@ -162,7 +175,7 @@ export default function ShiftDashboard() {
         // Only search + creation trends — counts sirf initial load pe chalti hai
         void Promise.all([
             fetchAnalytics(nextFilters),
-            fetchCreationTrends(trendLevel, nextFilters.createdDateFrom, nextFilters.createdDateTo)
+            fetchCreationTrends(trendLevel, nextFilters)
         ]).finally(() => { setLoading(false); });
     };
 
@@ -174,7 +187,7 @@ export default function ShiftDashboard() {
 
         void Promise.all([
             fetchAnalytics(def),
-            fetchCreationTrends(trendLevel, def.createdDateFrom, def.createdDateTo)
+            fetchCreationTrends(trendLevel, def)
         ]).finally(() => { setLoading(false); });
     };
 
@@ -217,7 +230,10 @@ export default function ShiftDashboard() {
 
         const searchParams: Record<string, unknown> = {};
 
-        // Carry forward applied date filters
+        // Carry forward applied filters
+        if (appliedFilters.shiftTypes.length) searchParams.shiftType = appliedFilters.shiftTypes;
+        if (appliedFilters.status.length === 1) searchParams.status = appliedFilters.status[0] === "Active";
+        if (appliedFilters.nightShift.length === 1) searchParams.nightShift = appliedFilters.nightShift[0] === "Yes";
         if (appliedFilters.createdDateFrom) searchParams.createdDateFrom = appliedFilters.createdDateFrom;
         if (appliedFilters.createdDateTo) searchParams.createdDateTo = appliedFilters.createdDateTo;
 
@@ -236,16 +252,40 @@ export default function ShiftDashboard() {
             searchParams.nightShift = isNight;
         } else if (payload.source === "trends") {
             const dateStr = String(payload.value ?? "");
-            if (dateStr.length === 4) {
-                searchParams.createdDateFrom = `${dateStr}-01-01`;
-                searchParams.createdDateTo = `${dateStr}-12-31`;
-            } else if (dateStr.length === 7) {
-                searchParams.createdDateFrom = `${dateStr}-01`;
-                const lastDay = dayjs(dateStr, "YYYY-MM").endOf("month").format("YYYY-MM-DD");
-                searchParams.createdDateTo = lastDay;
-            } else if (dateStr.length === 10) {
-                searchParams.createdDateFrom = dateStr;
-                searchParams.createdDateTo = dateStr;
+            let periodFrom: string | undefined;
+            let periodTo: string | undefined;
+
+            if (/^\d{4}$/.test(dateStr)) {
+                periodFrom = `${dateStr}-01-01`;
+                periodTo = `${dateStr}-12-31`;
+            } else if (/^\d{4}-\d{2}$/.test(dateStr)) {
+                periodFrom = `${dateStr}-01`;
+                periodTo = dayjs(dateStr, "YYYY-MM").endOf("month").format("YYYY-MM-DD");
+            } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                periodFrom = dateStr;
+                periodTo = dateStr;
+            } else {
+                const weeklyMatch = /^(\d{4})-W(\d{2})$/.exec(dateStr);
+                if (weeklyMatch) {
+                    const year = Number(weeklyMatch[1]);
+                    const week = Number(weeklyMatch[2]);
+                    const fourthJanuary = dayjs(`${year}-01-04`);
+                    const firstIsoWeekStart = fourthJanuary.subtract((fourthJanuary.day() + 6) % 7, "day");
+                    const weekStart = firstIsoWeekStart.add(week - 1, "week");
+                    periodFrom = weekStart.format("YYYY-MM-DD");
+                    periodTo = weekStart.add(6, "day").format("YYYY-MM-DD");
+                }
+            }
+
+            if (periodFrom) {
+                searchParams.createdDateFrom = appliedFilters.createdDateFrom && appliedFilters.createdDateFrom > periodFrom
+                    ? appliedFilters.createdDateFrom
+                    : periodFrom;
+            }
+            if (periodTo) {
+                searchParams.createdDateTo = appliedFilters.createdDateTo && appliedFilters.createdDateTo < periodTo
+                    ? appliedFilters.createdDateTo
+                    : periodTo;
             }
         }
 

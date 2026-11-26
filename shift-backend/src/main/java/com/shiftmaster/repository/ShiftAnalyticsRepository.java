@@ -1,9 +1,11 @@
 package com.shiftmaster.repository;
 
 import com.shiftmaster.dto.ShiftAnalyticsDto;
+import com.shiftmaster.dto.ShiftSearchRequestDto;
 import com.shiftmaster.entity.Shift;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Tuple;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
@@ -12,8 +14,10 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Repository
@@ -23,27 +27,26 @@ public class ShiftAnalyticsRepository {
     private EntityManager entityManager;
 
     public ShiftAnalyticsDto getShiftAnalytics(LocalDate dateFrom, LocalDate dateTo) {
+        ShiftSearchRequestDto filters = new ShiftSearchRequestDto();
+        filters.setCreatedDateFrom(dateFrom);
+        filters.setCreatedDateTo(dateTo);
+        return getShiftAnalytics(filters);
+    }
 
+    public ShiftAnalyticsDto getShiftAnalytics(ShiftSearchRequestDto filters) {
+        ShiftSearchRequestDto safeFilters = filters != null ? filters : new ShiftSearchRequestDto();
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
 
-        LocalDateTime from = dateFrom != null
-                ? dateFrom.atStartOfDay()
-                : null;
-
-        LocalDateTime to = dateTo != null
-                ? dateTo.plusDays(1).atStartOfDay()
-                : null;
-
-        long total = getTotal(cb, from, to);
+        long total = getTotal(cb, safeFilters);
 
         Map<String, Long> shiftsByType =
-                getCountByType(cb, from, to);
+                getCountByType(cb, safeFilters);
 
         Map<String, Long> activeByType =
-                getCountByTypeAndStatus(cb, from, to, true);
+                getCountByTypeAndStatus(cb, safeFilters, true);
 
         Map<String, Long> inactiveByType =
-                getCountByTypeAndStatus(cb, from, to, false);
+                getCountByTypeAndStatus(cb, safeFilters, false);
 
         long active = activeByType.values()
                 .stream()
@@ -56,7 +59,7 @@ public class ShiftAnalyticsRepository {
                 .sum();
 
         long nightShift =
-                getNightShiftCount(cb, from, to);
+                getNightShiftCount(cb, safeFilters);
 
         return new ShiftAnalyticsDto(
                 total,
@@ -69,10 +72,41 @@ public class ShiftAnalyticsRepository {
         );
     }
 
+    public List<Map<String, Object>> getCreationTrends(String level, ShiftSearchRequestDto filters) {
+        ShiftSearchRequestDto safeFilters = filters != null ? filters : new ShiftSearchRequestDto();
+        String normalizedLevel = level == null ? "" : level.trim().toUpperCase(Locale.ROOT);
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Tuple> query = cb.createTupleQuery();
+        Root<Shift> root = query.from(Shift.class);
+
+        var date = root.get("createdAt");
+        var period = switch (normalizedLevel) {
+            case "YEARLY" -> cb.function("DATE_FORMAT", String.class, date, cb.literal("%Y"));
+            case "MONTHLY" -> cb.function("DATE_FORMAT", String.class, date, cb.literal("%Y-%m"));
+            case "WEEKLY" -> cb.concat(
+                    cb.function("DATE_FORMAT", String.class, date, cb.literal("%x")),
+                    cb.concat("-W", cb.function("DATE_FORMAT", String.class, date, cb.literal("%v")))
+            );
+            case "DAILY" -> cb.function("DATE_FORMAT", String.class, date, cb.literal("%Y-%m-%d"));
+            default -> throw new IllegalArgumentException("Invalid trend level. Use YEARLY, MONTHLY, WEEKLY or DAILY");
+        };
+
+        query.select(cb.tuple(period.alias("month"), cb.count(root).alias("count")));
+        query.where(cb.and(buildFilterPredicate(cb, root, safeFilters), cb.isNotNull(date)));
+        query.groupBy(period);
+        query.orderBy(cb.asc(period));
+
+        return entityManager.createQuery(query).getResultList().stream().map(row -> {
+            Map<String, Object> data = new HashMap<>();
+            data.put("month", row.get("month", String.class));
+            data.put("count", row.get("count", Long.class));
+            return data;
+        }).toList();
+    }
+
     private long getTotal(
             CriteriaBuilder cb,
-            LocalDateTime from,
-            LocalDateTime to
+            ShiftSearchRequestDto filters
     ) {
         CriteriaQuery<Long> query =
                 cb.createQuery(Long.class);
@@ -83,7 +117,7 @@ public class ShiftAnalyticsRepository {
         query.select(cb.count(root));
 
         query.where(
-                buildDatePredicate(cb, root, from, to)
+                buildFilterPredicate(cb, root, filters)
         );
 
         return entityManager
@@ -93,8 +127,7 @@ public class ShiftAnalyticsRepository {
 
     private Map<String, Long> getCountByType(
             CriteriaBuilder cb,
-            LocalDateTime from,
-            LocalDateTime to
+            ShiftSearchRequestDto filters
     ) {
         CriteriaQuery<Object[]> query =
                 cb.createQuery(Object[].class);
@@ -108,7 +141,7 @@ public class ShiftAnalyticsRepository {
         );
 
         query.where(
-                buildDatePredicate(cb, root, from, to)
+                buildFilterPredicate(cb, root, filters)
         );
 
         query.groupBy(
@@ -124,8 +157,7 @@ public class ShiftAnalyticsRepository {
 
     private Map<String, Long> getCountByTypeAndStatus(
             CriteriaBuilder cb,
-            LocalDateTime from,
-            LocalDateTime to,
+            ShiftSearchRequestDto filters,
             boolean status
     ) {
         CriteriaQuery<Object[]> query =
@@ -141,7 +173,7 @@ public class ShiftAnalyticsRepository {
 
         query.where(
                 cb.and(
-                        buildDatePredicate(cb, root, from, to),
+                        buildFilterPredicate(cb, root, filters),
                         cb.equal(
                                 root.get("status"),
                                 status
@@ -162,8 +194,7 @@ public class ShiftAnalyticsRepository {
 
     private long getNightShiftCount(
             CriteriaBuilder cb,
-            LocalDateTime from,
-            LocalDateTime to
+            ShiftSearchRequestDto filters
     ) {
         CriteriaQuery<Long> query =
                 cb.createQuery(Long.class);
@@ -177,12 +208,7 @@ public class ShiftAnalyticsRepository {
 
         query.where(
                 cb.and(
-                        buildDatePredicate(
-                                cb,
-                                root,
-                                from,
-                                to
-                        ),
+                        buildFilterPredicate(cb, root, filters),
                         cb.isTrue(
                                 root.get("nightShift")
                         )
@@ -194,14 +220,20 @@ public class ShiftAnalyticsRepository {
                 .getSingleResult();
     }
 
-    private Predicate buildDatePredicate(
+    private Predicate buildFilterPredicate(
             CriteriaBuilder cb,
             Root<Shift> root,
-            LocalDateTime from,
-            LocalDateTime to
+            ShiftSearchRequestDto filters
     ) {
         Predicate predicate =
                 cb.conjunction();
+
+        LocalDateTime from = filters.getCreatedDateFrom() != null
+                ? filters.getCreatedDateFrom().atStartOfDay()
+                : null;
+        LocalDateTime to = filters.getCreatedDateTo() != null
+                ? filters.getCreatedDateTo().plusDays(1).atStartOfDay()
+                : null;
 
         if (from != null) {
             predicate = cb.and(
@@ -220,6 +252,29 @@ public class ShiftAnalyticsRepository {
                             root.get("createdAt"),
                             to
                     )
+            );
+        }
+
+        if (filters.getShiftType() != null && !filters.getShiftType().isEmpty()) {
+            predicate = cb.and(
+                    predicate,
+                    cb.upper(root.get("shiftType")).in(
+                            filters.getShiftType().stream().map(String::toUpperCase).toList()
+                    )
+            );
+        }
+
+        if (filters.getStatus() != null) {
+            predicate = cb.and(
+                    predicate,
+                    cb.equal(root.<Boolean>get("status"), filters.getStatus())
+            );
+        }
+
+        if (filters.getNightShift() != null) {
+            predicate = cb.and(
+                    predicate,
+                    cb.equal(root.<Boolean>get("nightShift"), filters.getNightShift())
             );
         }
 

@@ -107,9 +107,8 @@ public class ShiftController {
     @GetMapping("creation-trends")
     public ResponseEntity<List<Map<String, Object>>> getCreationTrends(
             @RequestParam String level,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateTo) {
-        return ResponseEntity.ok(shiftService.getCreationTrends(level, createdDateFrom, createdDateTo));
+            ShiftSearchRequestDto filters) {
+        return ResponseEntity.ok(shiftService.getCreationTrends(level, filters));
     }
 
 
@@ -126,9 +125,16 @@ public class ShiftController {
 
     @GetMapping("/analytics")
     public ResponseEntity<ShiftAnalyticsDto> getShiftAnalytics(
+            ShiftSearchRequestDto filters,
             @RequestParam(required = false) LocalDate dateFrom,
             @RequestParam(required = false) LocalDate dateTo) {
-        return ResponseEntity.ok(shiftService.getShiftAnalytics(dateFrom, dateTo));
+        if (filters.getCreatedDateFrom() == null && dateFrom != null) {
+            filters.setCreatedDateFrom(dateFrom);
+        }
+        if (filters.getCreatedDateTo() == null && dateTo != null) {
+            filters.setCreatedDateTo(dateTo);
+        }
+        return ResponseEntity.ok(shiftService.getShiftAnalytics(filters));
     }
 
 }

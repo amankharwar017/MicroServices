@@ -127,47 +127,8 @@ public class ShiftService {
     }
 
 
-    public List<Map<String, Object>> getCreationTrends(String level, LocalDate dateFrom, LocalDate dateTo) {
-        List<ShiftRepository.CreationTrend> results;
-        return switch (level.toUpperCase()) {
-            case "YEARLY" -> {
-                results = shiftRepository.getYearlyCreationTrends(dateFrom, dateTo);
-                yield results.stream().map(row -> {
-                    Map<String, Object> data = new HashMap<>();
-                    data.put("month", row.getPeriod());
-                    data.put("count", row.getCount());
-                    return data;
-                }).toList();
-            }
-            case "MONTHLY" -> {
-                results = shiftRepository.getMonthlyCreationTrends(dateFrom, dateTo);
-                yield results.stream().map(row -> {
-                    Map<String, Object> data = new HashMap<>();
-                    data.put("month", row.getPeriod());
-                    data.put("count", row.getCount());
-                    return data;
-                }).toList();
-            }
-            case "WEEKLY" -> {
-                results = shiftRepository.getWeeklyCreationTrends(dateFrom, dateTo);
-                yield results.stream().map(row -> {
-                    Map<String, Object> data = new HashMap<>();
-                    data.put("month", row.getPeriod());
-                    data.put("count", row.getCount());
-                    return data;
-                }).toList();
-            }
-            case "DAILY" -> {
-                results = shiftRepository.getDailyCreationTrends(dateFrom, dateTo);
-                yield results.stream().map(row -> {
-                    Map<String, Object> data = new HashMap<>();
-                    data.put("month", row.getPeriod());
-                    data.put("count", row.getCount());
-                    return data;
-                }).toList();
-            }
-            default -> throw new IllegalArgumentException("Invalid trend level. Use YEARLY, MONTHLY, WEEKLY or DAILY");
-        };
+    public List<Map<String, Object>> getCreationTrends(String level, ShiftSearchRequestDto filters) {
+        return shiftAnalyticsRepository.getCreationTrends(level, filters);
     }
 
     @Transactional(readOnly = true)
@@ -175,8 +136,8 @@ public class ShiftService {
         return shiftCountRepository.getCounts();
     }
 
-    public ShiftAnalyticsDto getShiftAnalytics(LocalDate dateFrom, LocalDate dateTo) {
-        return shiftAnalyticsRepository.getShiftAnalytics(dateFrom, dateTo);
+    public ShiftAnalyticsDto getShiftAnalytics(ShiftSearchRequestDto filters) {
+        return shiftAnalyticsRepository.getShiftAnalytics(filters);
     }
     public List<String> validateSingleShift(Map<String, Object> row) {
         Set<String> errors = new LinkedHashSet<>();

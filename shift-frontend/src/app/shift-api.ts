@@ -55,19 +55,44 @@ export const getShiftDropdownOptions = async () => {
     );
 };
 
-export const getCreationTrends = async (level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY", dateFrom?: string, dateTo?: string) => {
-  const params: Record<string, string> = { level };
-  if (dateFrom) params.createdDateFrom = dateFrom;
-  if (dateTo) params.createdDateTo = dateTo;
+export interface ShiftAnalyticsFilterParams {
+  shiftType?: string[];
+  status?: boolean;
+  nightShift?: boolean;
+  createdDateFrom?: string;
+  createdDateTo?: string;
+}
+
+export const getCreationTrends = async (
+  level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY",
+  filters: ShiftAnalyticsFilterParams = {}
+) => {
+  const params = Object.fromEntries(
+    Object.entries({ level, ...filters }).filter(([, value]) => value !== undefined && value !== "")
+  );
   return await axiosInstance.get("/shift/creation-trends", {
     params,
+    paramsSerializer: { indexes: null },
   });
 };
 
 export const getDashboardCounts = () => axiosInstance.get("/shift/dashboard-counts");
 
-export const getShiftAnalytics = async (dateFrom?: string, dateTo?: string) => {
-    return axiosInstance.get("/shift/analytics", { params: { dateFrom, dateTo } });
+export const getShiftAnalytics = async (
+  filtersOrDateFrom?: ShiftAnalyticsFilterParams | string,
+  dateTo?: string
+) => {
+  const filters: ShiftAnalyticsFilterParams =
+    typeof filtersOrDateFrom === "object" && filtersOrDateFrom !== null
+      ? filtersOrDateFrom
+      : { createdDateFrom: filtersOrDateFrom, createdDateTo: dateTo };
+  const params = Object.fromEntries(
+    Object.entries(filters).filter(([, value]) => value !== undefined && value !== "")
+  );
+  return axiosInstance.get("/shift/analytics", {
+    params,
+    paramsSerializer: { indexes: null },
+  });
 };
 
 

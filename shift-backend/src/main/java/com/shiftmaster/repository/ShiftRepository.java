@@ -34,8 +34,8 @@ public interface ShiftRepository extends JpaRepository<Shift, Long>, JpaSpecific
             FROM shift
             WHERE (:dateFrom IS NULL OR created_at >= :dateFrom)
               AND (:dateTo IS NULL OR created_at < DATE_ADD(:dateTo, INTERVAL 1 DAY))
-            GROUP BY DATE_FORMAT(created_at, '%Y')
-            ORDER BY DATE_FORMAT(created_at, '%Y')
+            GROUP BY DATE_FORMAT(created_at, '%Y-%m')
+            ORDER BY DATE_FORMAT(created_at, '%Y-%m')
             """, nativeQuery = true)
     List<CreationTrend> getMonthlyCreationTrends(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 
@@ -45,8 +45,8 @@ public interface ShiftRepository extends JpaRepository<Shift, Long>, JpaSpecific
             FROM shift
             WHERE (:dateFrom IS NULL OR created_at >= :dateFrom)
               AND (:dateTo IS NULL OR created_at < DATE_ADD(:dateTo, INTERVAL 1 DAY))
-            GROUP BY YEAR(created_at), WEEK(created_at, 1)
-            ORDER BY YEAR(created_at), WEEK(created_at, 1)
+            GROUP BY CONCAT(DATE_FORMAT(created_at, '%x'), '-W', DATE_FORMAT(created_at, '%v'))
+            ORDER BY CONCAT(DATE_FORMAT(created_at, '%x'), '-W', DATE_FORMAT(created_at, '%v'))
             """, nativeQuery = true)
     List<CreationTrend> getWeeklyCreationTrends(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 
@@ -56,8 +56,8 @@ public interface ShiftRepository extends JpaRepository<Shift, Long>, JpaSpecific
              FROM shift
              WHERE (:dateFrom IS NULL OR created_at >= :dateFrom)
                AND (:dateTo IS NULL OR created_at < DATE_ADD(:dateTo, INTERVAL 1 DAY))
-            GROUP BY DATE_FORMAT(created_at, '%Y')
-             ORDER BY DATE_FORMAT(created_at, '%Y')
+             GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
+             ORDER BY DATE_FORMAT(created_at, '%Y-%m-%d')
             """, nativeQuery = true)
     List<CreationTrend> getDailyCreationTrends(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 
