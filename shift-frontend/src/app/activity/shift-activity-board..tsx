@@ -277,7 +277,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Shift Master");
             const headers = shiftResponseHeaders.filter((header) => header !== "id" && allShifts.some((shift) => header in shift));
-            worksheet.addRow(headers);
+            worksheet.addRow(headers.map(h => h.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase())));
             allShifts.forEach((shift) => worksheet.addRow(headers.map((header) => { const value = shift[header as keyof ShiftResponse]; return Array.isArray(value) ? value.join(", ") : value ?? ""; })));
             const headerRow = worksheet.getRow(1);
             headerRow.height = 28;
@@ -318,7 +318,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Shift Template");
             worksheet.addRow(headers.map((header) => mandatoryHeaders.has(header) ? "MANDATORY" : "OPTIONAL"));
-            worksheet.addRow(headers);
+            worksheet.addRow(headers.map(h => h.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase())));
             worksheet.addRow(["M0001", "M-abc1", "Morning", "General", "09:00", "18:00", "13:00", "14:00", 10, 10, true, false, false, "#4CAF50", "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY", "Demo shift", "", "Sample data", true]);
             const mandatoryRow = worksheet.getRow(1);
             mandatoryRow.height = 24;
