@@ -13,18 +13,18 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public class ShiftDashboardRepository {
+public class ShiftCountRepository {
 
     @PersistenceContext
     private EntityManager entityManager;
 
-    public ShiftDashboardCountDto getDashboardCounts() {
+    public ShiftDashboardCountDto getCounts() {
         CriteriaBuilder cb = entityManager.getCriteriaBuilder();
 
-        long total = count(cb, false, null, null);
-        long active = count(cb, false, true, null);
-        long inactive = count(cb, false, false, null);
-        long nightShift = count(cb, true, null, null);
+        long total = count(cb, false, null);
+        long active = count(cb, false, true);
+        long inactive = count(cb, false, false);
+        long nightShift = count(cb, true, null);
 
         CriteriaQuery<Object[]> query = cb.createQuery(Object[].class);
         Root<Shift> root = query.from(Shift.class);
@@ -84,17 +84,14 @@ public class ShiftDashboardRepository {
     private long count(
             CriteriaBuilder cb,
             boolean night,
-            Boolean status,
-            Boolean ignored
+            Boolean status
     ) {
         CriteriaQuery<Long> query = cb.createQuery(Long.class);
         Root<Shift> root = query.from(Shift.class);
 
         query.select(cb.count(root));
 
-        var predicates = cb.and(
-                cb.isFalse(root.get("isDeleted"))
-        );
+        var predicates = cb.and(cb.isFalse(root.get("isDeleted")));
 
         if (night) {
             predicates = cb.and(

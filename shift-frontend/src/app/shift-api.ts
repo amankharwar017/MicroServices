@@ -64,10 +64,11 @@ export const getCreationTrends = async (level: "YEARLY" | "MONTHLY" | "WEEKLY" |
   });
 };
 
-export const getDashboardCounts = () =>
-    axiosInstance.get("/shift/dashboard-counts");
+export const getDashboardCounts = () => axiosInstance.get("/shift/dashboard-counts");
 
-
+export const getShiftAnalytics = async (dateFrom?: string, dateTo?: string) => {
+    return axiosInstance.get("/shift/analytics", { params: { dateFrom, dateTo } });
+};
 
 
 

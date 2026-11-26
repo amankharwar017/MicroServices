@@ -17,8 +17,7 @@ public interface ShiftRepository extends JpaRepository<Shift, Long>, JpaSpecific
 
     List<Shift> findByShiftCodeAndIdNotOrShiftNameAndIdNot(String shiftCode, Long codeId, String shiftName, Long nameId);
 
-    long countByStatus(boolean status);
-    long countByNightShift(boolean nightShift);
+
 
     @Query(value = """
             SELECT DATE_FORMAT(created_at, '%Y') AS period, COUNT(*) AS count

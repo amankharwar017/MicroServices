@@ -10,7 +10,7 @@ import DashboardChartCard from "../../components/DashboardChartCard";
 import DashboardStatTiles from "../../components/DashboardStatTiles";
 import ShiftDrilldownDialog from "./ShiftDrilldownDialog";
 import DashboardFilterBar from "./dashboard-filter";
-import { getDashboardCounts, searchShifts, getCreationTrends } from "../shift-api";
+import { getDashboardCounts, getShiftAnalytics, searchShifts, getCreationTrends } from "../shift-api";
 import type { ShiftResponse } from "../../types/shift";
 import type { ChartEngine, TableBreakdownRow, DrilldownPayload, ShiftAnalytics } from "../../types/chartTypes";
 import { useDispatch, useSelector } from "react-redux";
@@ -31,49 +31,6 @@ const defaultFilters = (): ShiftDashboardFilters => ({
     createdDateTo: dayjs().format("YYYY-MM-DD")
 });
 
-/** Build search params object from the applied filters */
-const buildSearchParams = (filters: ShiftDashboardFilters): Record<string, unknown> => {
-    const params: Record<string, unknown> = {};
-    if (filters.shiftTypes.length > 0) params.shiftType = filters.shiftTypes;
-    if (filters.status.length === 1) params.status = filters.status[0] === "Active";
-    if (filters.nightShift.length === 1) params.nightShift = filters.nightShift[0] === "Yes";
-    if (filters.createdDateFrom) params.createdDateFrom = filters.createdDateFrom;
-    if (filters.createdDateTo) params.createdDateTo = filters.createdDateTo;
-    return params;
-};
-
-/** Compute chart analytics from the search API response content array */
-const computeAnalyticsFromSearchData = (shifts: ShiftResponse[]): Omit<ShiftAnalytics, "creationTrends"> => {
-    const total = shifts.length;
-    const active = shifts.filter(s => s.status === true).length;
-    const inactive = total - active;
-
-    // Shifts by type
-    const typeMap = new Map<string, { count: number; active: number; inactive: number }>();
-    shifts.forEach(s => {
-        const type = s.shiftType || "Unspecified";
-        const existing = typeMap.get(type) || { count: 0, active: 0, inactive: 0 };
-        existing.count++;
-        if (s.status) existing.active++; else existing.inactive++;
-        typeMap.set(type, existing);
-    });
-    const shiftsByType = Array.from(typeMap.entries()).map(([name, data]) => ({
-        name,
-        count: data.count,
-        active: data.active,
-        inactive: data.inactive
-    }));
-
-    // Night distribution
-    const nightCount = shifts.filter(s => s.nightShift === true).length;
-    const dayCount = total - nightCount;
-    const nightDistribution = [
-        { name: "Night Shift", count: nightCount },
-        { name: "Day Shift", count: dayCount }
-    ];
-
-    return { total, active, inactive, shiftsByType, nightDistribution };
-};
 
 export default function ShiftDashboard() {
     const [engine, setEngine] = useState<ChartEngine>("recharts");
@@ -126,21 +83,40 @@ export default function ShiftDashboard() {
         }
     }, []);
 
-    // ---- API 3: Search (charts data) ----
-    const fetchSearchForCharts = useCallback(async (activeFilters: ShiftDashboardFilters) => {
+    // ---- API 3: Dashboard Analytics ----
+    const fetchAnalytics = useCallback(async (activeFilters: ShiftDashboardFilters) => {
         try {
-            const params = buildSearchParams(activeFilters);
-            // Fetch a large page (up to 10000) so all filtered records come back for chart computation
-            const response = await searchShifts(params, 0, 10000, "id,asc");
-            const content: ShiftResponse[] = response.data?.content ?? [];
-            const chartData = computeAnalyticsFromSearchData(content);
+            const response = await getShiftAnalytics(
+                activeFilters.createdDateFrom,
+                activeFilters.createdDateTo
+            );
+
+            const data = response.data;
+
+            const shiftsByType = Object.keys(data.shiftsByType ?? {}).map(name => ({
+                name,
+                count: data.shiftsByType[name] ?? 0,
+                active: data.activeByType?.[name] ?? 0,
+                inactive: data.inactiveByType?.[name] ?? 0
+            }));
+
+            const nightCount = data.nightShift ?? 0;
+            const total = data.total ?? 0;
+
             setAnalytics(prev => ({
-                ...chartData,
+                total,
+                active: data.active ?? 0,
+                inactive: data.inactive ?? 0,
+                shiftsByType,
+                nightDistribution: [
+                    { name: "Night Shift", count: nightCount },
+                    { name: "Day Shift", count: total - nightCount }
+                ],
                 creationTrends: prev?.creationTrends ?? []
             }));
         } catch (err) {
             if (!isCancel(err)) {
-                console.error("Failed to load search data for charts:", err);
+                console.error("Failed to load analytics:", err);
             }
         }
     }, []);
@@ -154,7 +130,7 @@ export default function ShiftDashboard() {
             await Promise.all([
                 fetchDashboardCounts(),
                 fetchCreationTrends("YEARLY", activeFilters.createdDateFrom, activeFilters.createdDateTo),
-                fetchSearchForCharts(activeFilters)
+                fetchAnalytics(activeFilters)
             ]);
         } catch (err) {
             if (!isCancel(err)) {
@@ -165,7 +141,7 @@ export default function ShiftDashboard() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, [fetchDashboardCounts, fetchSearchForCharts]);
+    }, [fetchDashboardCounts, fetchAnalytics]);
 
     // Run the initial Dashboard load only once when this component is mounted.
     useEffect(() => {
@@ -185,7 +161,7 @@ export default function ShiftDashboard() {
         setAppliedFilters(nextFilters);
         // Only search + creation trends — counts sirf initial load pe chalti hai
         void Promise.all([
-            fetchSearchForCharts(nextFilters),
+            fetchAnalytics(nextFilters),
             fetchCreationTrends(trendLevel, nextFilters.createdDateFrom, nextFilters.createdDateTo)
         ]).finally(() => { setLoading(false); });
     };
@@ -195,9 +171,9 @@ export default function ShiftDashboard() {
         setLoading(true);
         setFilters(def);
         setAppliedFilters(def);
-        // Only search + creation trends — counts sirf initial load pe chalti hai
+
         void Promise.all([
-            fetchSearchForCharts(def),
+            fetchAnalytics(def),
             fetchCreationTrends(trendLevel, def.createdDateFrom, def.createdDateTo)
         ]).finally(() => { setLoading(false); });
     };

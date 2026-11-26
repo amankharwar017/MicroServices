@@ -49,11 +49,11 @@ export default function DashboardFilterBar({
     });
 
     if (appliedFilters.createdDateFrom) {
-        chips.push({ label: `From: ${appliedFilters.createdDateFrom}`, type: "createdDateFrom", value: appliedFilters.createdDateFrom });
+        chips.push({ label: `From: ${dayjs(appliedFilters.createdDateFrom).format("DD-MM-YYYY")}`, type: "createdDateFrom", value: appliedFilters.createdDateFrom });
     }
 
     if (appliedFilters.createdDateTo) {
-        chips.push({ label: `To: ${appliedFilters.createdDateTo}`, type: "createdDateTo", value: appliedFilters.createdDateTo });
+        chips.push({ label: `To: ${dayjs(appliedFilters.createdDateTo).format("DD-MM-YYYY")}`, type: "createdDateTo", value: appliedFilters.createdDateTo });
     }
 
     const today = dayjs().format("YYYY-MM-DD");

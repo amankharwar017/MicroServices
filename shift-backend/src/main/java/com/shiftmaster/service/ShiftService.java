@@ -1,6 +1,7 @@
 package com.shiftmaster.service;
 
 import com.shiftmaster.dto.ApiResponseDto;
+import com.shiftmaster.dto.ShiftAnalyticsDto;
 import com.shiftmaster.dto.ShiftDashboardCountDto;
 import com.shiftmaster.dto.ShiftRequestDto;
 import com.shiftmaster.dto.ShiftResponseDto;
@@ -8,7 +9,8 @@ import com.shiftmaster.dto.ShiftSearchRequestDto;
 import com.shiftmaster.entity.Shift;
 import com.shiftmaster.exception.ShiftNotFoundException;
 import com.shiftmaster.mapper.ShiftMapper;
-import com.shiftmaster.repository.ShiftDashboardRepository;
+import com.shiftmaster.repository.ShiftAnalyticsRepository;
+import com.shiftmaster.repository.ShiftCountRepository;
 import com.shiftmaster.repository.ShiftRepository;
 import com.shiftmaster.util.ShiftUtil;
 import com.shiftmaster.validator.ShiftValidator;
@@ -46,9 +48,10 @@ public class ShiftService {
     private final ShiftHistoryService shiftHistoryService;
     private final ObjectMapper objectMapper;
     private final Validator beanValidator;
-    private final ShiftDashboardRepository shiftDashboardRepository;
+    private final ShiftCountRepository shiftCountRepository;
     private final ShiftEmailService shiftEmailService;
     private final ShiftNotificationService shiftNotificationService;
+    private final ShiftAnalyticsRepository shiftAnalyticsRepository;
 
 
     @Transactional
@@ -173,11 +176,13 @@ public class ShiftService {
     }
 
     @Transactional(readOnly = true)
-    public ShiftDashboardCountDto getDashboardCounts() {
-        return shiftDashboardRepository.getDashboardCounts();
+    public ShiftDashboardCountDto getCounts() {
+        return shiftCountRepository.getCounts();
     }
 
-
+    public ShiftAnalyticsDto getShiftAnalytics(LocalDate dateFrom, LocalDate dateTo) {
+        return shiftAnalyticsRepository.getShiftAnalytics(dateFrom, dateTo);
+    }
     public List<String> validateSingleShift(Map<String, Object> row) {
         Set<String> errors = new LinkedHashSet<>();
         if (row == null) {

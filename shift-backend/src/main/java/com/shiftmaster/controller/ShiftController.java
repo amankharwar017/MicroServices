@@ -2,6 +2,7 @@ package com.shiftmaster.controller;
 
 import com.shiftmaster.dto.ApiResponseDto;
 import com.shiftmaster.dto.DropdownOptionsDto;
+import com.shiftmaster.dto.ShiftAnalyticsDto;
 import com.shiftmaster.dto.ShiftDashboardCountDto;
 import com.shiftmaster.dto.ShiftHistoryResponseDto;
 import com.shiftmaster.dto.ShiftRequestDto;
@@ -126,7 +127,14 @@ public class ShiftController {
 
     @GetMapping("/dashboard-counts")
     public ResponseEntity<ShiftDashboardCountDto> getDashboardCounts() {
-        return ResponseEntity.ok(shiftService.getDashboardCounts());
+        return ResponseEntity.ok(shiftService.getCounts());
+    }
+
+    @GetMapping("/analytics")
+    public ResponseEntity<ShiftAnalyticsDto> getShiftAnalytics(
+            @RequestParam(required = false) LocalDate dateFrom,
+            @RequestParam(required = false) LocalDate dateTo) {
+        return ResponseEntity.ok(shiftService.getShiftAnalytics(dateFrom, dateTo));
     }
 
 }
