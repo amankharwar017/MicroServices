@@ -111,7 +111,7 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
     return () => {
       cancelled = true;
     };
-  }, [refreshSummaryCounts, summaryMode, formData.createdDateFrom, formData.createdDateTo]);
+  }, [refreshSummaryCounts]);
 
   const filterLabels: Record<string, string> = {
     searchText: "Search",
@@ -210,9 +210,34 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
 
   const handleSummaryModeChange = (mode: "beginning" | "date") => {
     setSummaryMode(mode);
-    const nextData = { ...formDataRef.current, status: true, nightShift: "all", shiftType: [] };
+
+    const nextData = {
+      ...formDataRef.current,
+      status: true,
+      nightShift: "all",
+      shiftType: []
+    };
+
     formDataRef.current = nextData;
     setFormData(nextData);
+
+    const loadAnalytics = async () => {
+      try {
+        const response = mode === "date"
+          ? await getShiftAnalytics(nextData.createdDateFrom, nextData.createdDateTo)
+          : await getShiftAnalytics();
+
+        setTotalShifts(response.data?.total ?? 0);
+        setActiveShifts(response.data?.active ?? 0);
+        setInactiveShifts(response.data?.inactive ?? 0);
+        setNightShifts(response.data?.nightShift ?? 0);
+      } catch (error) {
+        console.error("Failed to fetch shift analytics:", error);
+      }
+    };
+
+    void loadAnalytics();
+
     const nextFilters = buildFilters(nextData, mode);
     onFiltersChange?.(buildFilters(nextData, "date"), handleRemoveFilter);
     searchIfChanged(nextFilters);
