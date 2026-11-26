@@ -7,7 +7,6 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import NightlightIcon from "@mui/icons-material/Nightlight";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import SearchIcon from "@mui/icons-material/Search";
-import CloseIcon from "@mui/icons-material/Close";
 import TextField from "../../components/TextField";
 import MultiselectAutoComplete from "../../components/MultiselectAutoComplete";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -100,10 +99,10 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
           ? await getShiftAnalytics(formData.createdDateFrom, formData.createdDateTo)
           : await getShiftAnalytics();
 
-        setTotalShifts(response.data.totalShifts);
-        setActiveShifts(response.data.activeShifts);
-        setInactiveShifts(response.data.inactiveShifts);
-        setNightShifts(response.data.nightShifts);
+        setTotalShifts(response.data?.total ?? 0);
+        setActiveShifts(response.data?.active ?? 0);
+        setInactiveShifts(response.data?.inactive ?? 0);
+        setNightShifts(response.data?.nightShift ?? 0);
       } catch (error) {
         console.error("Failed to fetch shift analytics:", error);
       }
