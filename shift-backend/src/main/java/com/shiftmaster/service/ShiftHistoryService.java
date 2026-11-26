@@ -7,6 +7,7 @@ import com.shiftmaster.dto.UserResponseDto;
 import com.shiftmaster.entity.ShiftHistory;
 import com.shiftmaster.repository.ShiftHistoryRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
@@ -14,6 +15,7 @@ import tools.jackson.core.JacksonException;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ShiftHistoryService {
@@ -59,15 +61,25 @@ public class ShiftHistoryService {
         if (auditValues != null) {
             Long createdBy = auditValues.getCreatedBy();
             Long updatedBy = auditValues.getUpdatedBy();
-            if (createdBy != null) {
-                UserResponseDto createdUser = userServiceClient.getUserById(createdBy);
-                response.setCreatedByUsername(createdUser.getUsername());
-            }
+            String createdByUsername = resolveUsername(createdBy);
+            response.setCreatedByUsername(createdByUsername);
             if (updatedBy != null) {
-                UserResponseDto updatedUser = userServiceClient.getUserById(updatedBy);
-                response.setUpdatedByUsername(updatedUser.getUsername());
+                response.setUpdatedByUsername(updatedBy.equals(createdBy) ? createdByUsername : resolveUsername(updatedBy));
             }
         }
         return response;
+    }
+
+    private String resolveUsername(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        try {
+            UserResponseDto user = userServiceClient.getUserById(userId);
+            return user != null ? user.getUsername() : null;
+        } catch (Exception e) {
+            log.warn("Failed to resolve username for userId {}", userId, e);
+            return null;
+        }
     }
 }
