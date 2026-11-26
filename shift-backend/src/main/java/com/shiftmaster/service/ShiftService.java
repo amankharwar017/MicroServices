@@ -113,11 +113,6 @@ public class ShiftService {
         });
     }
 
-    @Cacheable(value = "shiftList", key = "#pageable.pageNumber + '-' + #pageable.pageSize + '-' + #pageable.sort.toString()")
-    public Page<ShiftResponseDto> getAllShifts(Pageable pageable) {
-        Page<Shift> shifts = shiftRepository.findAll(pageable);
-        return shifts.map(shiftMapper::toResponse);
-    }
 
     @Cacheable(value = "shiftById", key = "#id")
     public ShiftResponseDto getShiftById(Long id) {

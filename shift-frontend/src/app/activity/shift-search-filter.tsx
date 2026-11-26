@@ -14,7 +14,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { type Dayjs } from "dayjs";
-import { searchShifts } from "../shift-api";
+import { searchShifts, getShiftAnalytics } from "../shift-api";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch } from "../../redux/store";
 import { fetchShiftDropdownOptions, selectFreshDropdownOptions, } from "../../redux/cacheSlice";
@@ -96,25 +96,16 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
     let cancelled = false;
     const fetchSummaryCounts = async () => {
       try {
-        const dateFilters: Record<string, string> = {};
-        if (summaryMode === "date") {
-          if (formData.createdDateFrom) dateFilters.createdDateFrom = formData.createdDateFrom;
-          if (formData.createdDateTo) dateFilters.createdDateTo = formData.createdDateTo;
-        }
-        const [activeResponse, inactiveResponse, nightResponse] = await Promise.all([
-          searchShifts({ ...dateFilters, status: true }, 0, 1, "id,asc"),
-          searchShifts({ ...dateFilters, status: false }, 0, 1, "id,asc"),
-          searchShifts({ ...dateFilters, nightShift: true }, 0, 1, "id,asc")
-        ]);
-        if (cancelled) return;
-        const activeCount = activeResponse.data?.totalElements ?? 0;
-        const inactiveCount = inactiveResponse.data?.totalElements ?? 0;
-        setActiveShifts(activeCount);
-        setInactiveShifts(inactiveCount);
-        setTotalShifts(activeCount + inactiveCount);
-        setNightShifts(nightResponse.data?.totalElements ?? 0);
+        const response = summaryMode === "date"
+          ? await getShiftAnalytics(formData.createdDateFrom, formData.createdDateTo)
+          : await getShiftAnalytics();
+
+        setTotalShifts(response.data.totalShifts);
+        setActiveShifts(response.data.activeShifts);
+        setInactiveShifts(response.data.inactiveShifts);
+        setNightShifts(response.data.nightShifts);
       } catch (error) {
-        console.error("Failed to fetch shift summary counts:", error);
+        console.error("Failed to fetch shift analytics:", error);
       }
     };
     void fetchSummaryCounts();
@@ -142,14 +133,14 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
   };
 
   const formatFilterValue = (value: unknown): string => {
-  if (typeof value === "boolean") return value ? "Active" : "Inactive";
-  if (Array.isArray(value)) return value.join(", ");
-  if (value instanceof Set) return [...value].join(", ");
-  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return dayjs(value).format("DD-MM-YYYY");
-  }
-  return String(value);
-};
+    if (typeof value === "boolean") return value ? "Active" : "Inactive";
+    if (Array.isArray(value)) return value.join(", ");
+    if (value instanceof Set) return [...value].join(", ");
+    if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return dayjs(value).format("DD-MM-YYYY");
+    }
+    return String(value);
+  };
 
   const buildFilters = (data: typeof formData, mode = summaryMode): SearchData => {
     const filters: SearchData = {};
