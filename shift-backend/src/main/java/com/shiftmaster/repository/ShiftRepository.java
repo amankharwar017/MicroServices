@@ -35,8 +35,8 @@ public interface ShiftRepository extends JpaRepository<Shift, Long>, JpaSpecific
             FROM shift
             WHERE (:dateFrom IS NULL OR created_at >= :dateFrom)
               AND (:dateTo IS NULL OR created_at < DATE_ADD(:dateTo, INTERVAL 1 DAY))
-            GROUP BY YEAR(created_at), MONTH(created_at)
-            ORDER BY YEAR(created_at), MONTH(created_at)
+            GROUP BY DATE_FORMAT(created_at, '%Y')
+            ORDER BY DATE_FORMAT(created_at, '%Y')
             """, nativeQuery = true)
     List<CreationTrend> getMonthlyCreationTrends(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 
@@ -57,8 +57,8 @@ public interface ShiftRepository extends JpaRepository<Shift, Long>, JpaSpecific
             FROM shift
             WHERE (:dateFrom IS NULL OR created_at >= :dateFrom)
               AND (:dateTo IS NULL OR created_at < DATE_ADD(:dateTo, INTERVAL 1 DAY))
-            GROUP BY DATE(created_at)
-            ORDER BY DATE(created_at)
+           GROUP BY DATE_FORMAT(created_at, '%Y')
+            ORDER BY DATE_FORMAT(created_at, '%Y')
             """, nativeQuery = true)
     List<CreationTrend> getDailyCreationTrends(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 
