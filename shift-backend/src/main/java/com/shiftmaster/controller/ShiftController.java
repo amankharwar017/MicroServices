@@ -47,7 +47,7 @@ public class ShiftController {
     private final ShiftNotificationService shiftNotificationService;
     private final DropdownService dropdownService;
 
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     @PostMapping("save-multiple")
     public ResponseEntity<ApiResponseDto> saveMultipleShifts(@RequestBody List<@Valid ShiftRequestDto> requests) {
         return shiftService.saveMultipleShifts(requests);
@@ -57,12 +57,6 @@ public class ShiftController {
     @DeleteMapping("delete/{shiftId}")
     public ResponseEntity<ApiResponseDto> deleteShift(@PathVariable Long shiftId) {
         return shiftService.deleteShift(shiftId);
-    }
-
-
-    @GetMapping("list")
-    public ResponseEntity<Page<ShiftResponseDto>> getAllShifts(@ParameterObject @PageableDefault() Pageable pageable) {
-        return ResponseEntity.ok(shiftService.getAllShifts(pageable));
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
