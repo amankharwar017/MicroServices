@@ -40,10 +40,10 @@ public class ShiftAnalyticsRepository {
                 getCountByType(cb, from, to);
 
         Map<String, Long> activeByType =
-                getCountByTypeAndStatus(cb, from, to, "ACTIVE");
+                getCountByTypeAndStatus(cb, from, to, true);
 
         Map<String, Long> inactiveByType =
-                getCountByTypeAndStatus(cb, from, to, "INACTIVE");
+                getCountByTypeAndStatus(cb, from, to, false);
 
         long active = activeByType.values()
                 .stream()
@@ -126,7 +126,7 @@ public class ShiftAnalyticsRepository {
             CriteriaBuilder cb,
             LocalDateTime from,
             LocalDateTime to,
-            String status
+            boolean status
     ) {
         CriteriaQuery<Object[]> query =
                 cb.createQuery(Object[].class);
