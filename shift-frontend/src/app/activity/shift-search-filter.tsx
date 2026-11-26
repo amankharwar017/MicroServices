@@ -142,11 +142,14 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
   };
 
   const formatFilterValue = (value: unknown): string => {
-    if (typeof value === "boolean") return value ? "Active" : "Inactive";
-    if (Array.isArray(value)) return value.join(", ");
-    if (value instanceof Set) return [...value].join(", ");
-    return String(value);
-  };
+  if (typeof value === "boolean") return value ? "Active" : "Inactive";
+  if (Array.isArray(value)) return value.join(", ");
+  if (value instanceof Set) return [...value].join(", ");
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return dayjs(value).format("DD-MM-YYYY");
+  }
+  return String(value);
+};
 
   const buildFilters = (data: typeof formData, mode = summaryMode): SearchData => {
     const filters: SearchData = {};
