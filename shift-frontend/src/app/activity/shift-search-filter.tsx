@@ -70,7 +70,7 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
   const statusOptions = (dropdownOptions?.statusOptions ?? []).map(
     option => ({
       label: option.name,
-      value: option.name.toLowerCase() === "active"? "true": option.name.toLowerCase() === "inactive" ? "false" : "all",
+      value: option.name.toLowerCase() === "active" ? "true" : option.name.toLowerCase() === "inactive" ? "false" : "all",
     })
   );
   const getDate = (daysAgo = 0) => {
@@ -204,15 +204,15 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
     lastSearchRef.current = key;
     onSearch(filters);
   };
- const handleSearch = () => {
-  if (formDataRef.current.createdDateFrom && formDataRef.current.createdDateTo && formDataRef.current.createdDateFrom > formDataRef.current.createdDateTo) return;
-  const searchData = buildFilters(formDataRef.current, "date");
-  const searchKey = JSON.stringify(searchData);
-  if (lastSearchRef.current === searchKey) return;
-  onFiltersChange?.(searchData, handleRemoveFilter);
-  searchIfChanged(searchData);
-  if (!dashboardLayout) setShowMoreFilters(false);
-};
+  const handleSearch = () => {
+    if (formDataRef.current.createdDateFrom && formDataRef.current.createdDateTo && formDataRef.current.createdDateFrom > formDataRef.current.createdDateTo) return;
+    const searchData = buildFilters(formDataRef.current, "date");
+    const searchKey = JSON.stringify(searchData);
+    if (lastSearchRef.current === searchKey) return;
+    onFiltersChange?.(searchData, handleRemoveFilter);
+    searchIfChanged(searchData);
+    if (!dashboardLayout) setShowMoreFilters(false);
+  };
 
 
   const handleSummaryModeChange = (mode: "beginning" | "date") => {
@@ -310,13 +310,7 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
                   <Box sx={{ display: dashboardLayout ? "grid" : "block", gridTemplateColumns: dashboardLayout ? "repeat(5, minmax(0, 1fr))" : undefined, gap: dashboardLayout ? 1.5 : undefined, alignItems: "end" }}>
                     <Box className="shift-search-fields" sx={{ position: "relative", display: dashboardLayout ? "contents" : undefined }} onKeyDown={handleKeyDown}>
                       {showSearchText && (
-                        <TextField label="Shift Code / Shift Name" name="searchText" value={formData.searchText} onChange={handleChange} inputRef={searchInputRef} endIcon={formData.searchText ? (
-                          <IconButton size="small" onClick={handleClearSearch} aria-label="Clear search">
-                            <CloseIcon sx={{ color: "#041321" }} />
-                          </IconButton>
-                        ) : (
-                          <SearchIcon onClick={() => searchInputRef.current?.focus()} sx={{ color: "#f8fcff", bgcolor: "#01070c", borderRadius: "50%", padding: "3px", cursor: "pointer" }} />
-                        )} />
+                        <TextField label="Shift Code / Shift Name" name="searchText" value={formData.searchText} onChange={handleChange} inputRef={searchInputRef} endIcon={<SearchIcon onClick={handleSearch} sx={{ color: "#f8fcff", bgcolor: "#01070c", borderRadius: "50%", padding: "3px", cursor: "pointer" }} />} />
                       )}
                       <Box className="shift-search-date-field">
                         <Typography className="shift-search-date-label">From Date</Typography>

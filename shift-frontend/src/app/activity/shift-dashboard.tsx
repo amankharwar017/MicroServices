@@ -319,7 +319,7 @@ export default function ShiftDashboard() {
                 <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} useFlexGap sx={{ alignItems: { xs: "flex-start", sm: "center" }, flexWrap: "wrap" }} >
                     {/* Date badge */}
                     {(appliedFilters.createdDateFrom || appliedFilters.createdDateTo) ? (
-                        <Chip label={`From: ${appliedFilters.createdDateFrom || "Start"}  To: ${appliedFilters.createdDateTo || "Now"}`} size="small" sx={{ fontWeight: 600, bgcolor: "#f1f5f9", color: "#334155", border: "1px solid #cbd5e1" }} />
+                        <Chip label={`From: ${appliedFilters.createdDateFrom ? dayjs(appliedFilters.createdDateFrom).format("DD-MM-YYYY") : "Start"}  To: ${appliedFilters.createdDateTo ? dayjs(appliedFilters.createdDateTo).format("DD-MM-YYYY") : "Now"}`} size="small" sx={{ fontWeight: 600, bgcolor: "#f1f5f9", color: "#334155", border: "1px solid #cbd5e1" }} />
                     ) : (
                         <Chip label="All Time Records" size="small" sx={{ fontWeight: 600, bgcolor: "#f1f5f9", color: "#334155" }} />
                     )}
