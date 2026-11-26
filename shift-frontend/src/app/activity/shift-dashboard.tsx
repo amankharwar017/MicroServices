@@ -191,6 +191,14 @@ export default function ShiftDashboard() {
         ]).finally(() => { setLoading(false); });
     };
 
+    const handleRemoveChip = (nextFilters: ShiftDashboardFilters) => {
+        setLoading(true);
+        void Promise.all([
+            fetchAnalytics(nextFilters),
+            fetchCreationTrends(trendLevel, nextFilters)
+        ]).finally(() => { setLoading(false); });
+    };
+
     const handleRefresh = () => {
         const def = defaultFilters();
         setRefreshing(true);
@@ -417,6 +425,7 @@ export default function ShiftDashboard() {
                 setAppliedFilters={setAppliedFilters}
                 onApply={handleApplyFilters}
                 onReset={handleResetFilters}
+                onRemoveChip={handleRemoveChip}
                 optionsData={dropdownOptions}
             />
             {/* Loading Indicator */}

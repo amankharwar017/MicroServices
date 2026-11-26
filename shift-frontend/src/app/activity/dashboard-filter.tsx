@@ -22,6 +22,7 @@ type DashboardFilterBarProps = {
     setAppliedFilters: Dispatch<SetStateAction<ShiftDashboardFilters>>;
     onApply: () => void;
     onReset: () => void;
+    onRemoveChip?: (nextFilters: ShiftDashboardFilters) => void;
     optionsData: { shiftTypes?: Option[] } | null;
 };
 
@@ -32,6 +33,7 @@ export default function DashboardFilterBar({
     setAppliedFilters,
     onApply,
     onReset,
+    onRemoveChip,
     optionsData
 }: DashboardFilterBarProps) {
     const chips: { label: string; type: string; value?: string }[] = [];
@@ -59,33 +61,30 @@ export default function DashboardFilterBar({
     const today = dayjs().format("YYYY-MM-DD");
 
     const removeFilter = (type: string, value?: string) => {
+        let nextFilters: ShiftDashboardFilters = appliedFilters;
+
         if (type === "shiftType") {
             const shiftTypes = appliedFilters.shiftTypes.filter(item => item !== value);
             setFilters(prev => ({ ...prev, shiftTypes }));
-            setAppliedFilters(prev => ({ ...prev, shiftTypes }));
-        }
-
-        if (type === "status") {
+            nextFilters = { ...appliedFilters, shiftTypes };
+        } else if (type === "status") {
             const status = appliedFilters.status.filter(item => item !== value);
             setFilters(prev => ({ ...prev, status }));
-            setAppliedFilters(prev => ({ ...prev, status }));
-        }
-
-        if (type === "nightShift") {
+            nextFilters = { ...appliedFilters, status };
+        } else if (type === "nightShift") {
             const nightShift = appliedFilters.nightShift.filter(item => item !== value);
             setFilters(prev => ({ ...prev, nightShift }));
-            setAppliedFilters(prev => ({ ...prev, nightShift }));
-        }
-
-        if (type === "createdDateFrom") {
+            nextFilters = { ...appliedFilters, nightShift };
+        } else if (type === "createdDateFrom") {
             setFilters(prev => ({ ...prev, createdDateFrom: "" }));
-            setAppliedFilters(prev => ({ ...prev, createdDateFrom: "" }));
+            nextFilters = { ...appliedFilters, createdDateFrom: "" };
+        } else if (type === "createdDateTo") {
+            setFilters(prev => ({ ...prev, createdDateTo: "" }));
+            nextFilters = { ...appliedFilters, createdDateTo: "" };
         }
 
-        if (type === "createdDateTo") {
-            setFilters(prev => ({ ...prev, createdDateTo: "" }));
-            setAppliedFilters(prev => ({ ...prev, createdDateTo: "" }));
-        }
+        setAppliedFilters(nextFilters);
+        onRemoveChip?.(nextFilters);
     };
 
     return (
