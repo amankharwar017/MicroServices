@@ -27,7 +27,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         String path = exchange.getRequest().getURI().getPath();
         if (path.equals("/user/login") || path.equals("/user/register")
-                || path.equals("/shift/dashboard-counts") || path.equals("/shift/creation-trends")) {
+                || path.equals("/shift/dashboard-counts") || path.equals("/shift/creation-trends") || path.equals("/shift/analytics")) {
             return chain.filter(exchange);
         }
 
