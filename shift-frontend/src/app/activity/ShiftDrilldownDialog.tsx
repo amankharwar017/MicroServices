@@ -153,7 +153,7 @@ export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, s
                     </Stack>
                 </DialogTitle>
 
-                <DialogContent sx={{ p: 1.5, flex: 1, overflow: "auto" }}>
+                <DialogContent sx={{ p: 1.5, flex: 1, minHeight: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
                     <Table
                         data={shifts}
                         columns={columns}
@@ -184,11 +184,13 @@ export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, s
                             enableColumnActions: false,
                             enableHiding: true,
                             initialState: { density: "compact", showGlobalFilter: true, pagination: { pageIndex: 0, pageSize: 10 } },
-                            muiTablePaperProps: { elevation: 0, sx: { backgroundColor: "transparent", boxShadow: "none", width: "100%", overflow: "hidden" } },
+                            muiTablePaperProps: { elevation: 0, sx: { backgroundColor: "transparent", boxShadow: "none", width: "100%", height: "100%", display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden" } },
                             muiTableContainerProps: {
                                 sx: {
                                     width: "100%",
-                                    maxHeight: 520,
+                                    flex: 1,
+                                    minHeight: 0,
+                                    maxHeight: "calc(90vh - 280px)",
                                     overflowX: "auto",
                                     overflowY: "auto",
                                     "&::-webkit-scrollbar": { width: "12px", height: "12px" },
