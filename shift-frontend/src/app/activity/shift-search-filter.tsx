@@ -288,11 +288,6 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
     onFiltersChange?.(buildFilters(nextFormData), handleRemoveFilter);
   };
 
-  const handleClearSearch = () => {
-    updateFilter({ ...formData, searchText: "" });
-    searchInputRef.current?.focus();
-  };
-
   const handleShiftTypeChange = (value: string | string[]) => {
     const selectedValues = Array.isArray(value) ? value : value ? [value] : [];
     const nextShiftTypes = selectedValues.includes("All") ? formData.shiftType.length === shiftTypeOptions.length ? [] : shiftTypeOptions : selectedValues.filter(type => shiftTypeOptions.includes(type));

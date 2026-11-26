@@ -1,6 +1,7 @@
 package com.shiftmaster.controller;
 
 import com.shiftmaster.dto.ApiResponseDto;
+import com.shiftmaster.dto.CreationTrendsDto;
 import com.shiftmaster.dto.DropdownOptionsDto;
 import com.shiftmaster.dto.ShiftAnalyticsDto;
 import com.shiftmaster.dto.ShiftDashboardCountDto;
@@ -105,11 +106,10 @@ public class ShiftController {
 
 
     @GetMapping("creation-trends")
-    public ResponseEntity<List<Map<String, Object>>> getCreationTrends(
-            @RequestParam String level,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate createdDateTo) {
-        return ResponseEntity.ok(shiftService.getCreationTrends(level, createdDateFrom, createdDateTo));
+    public ResponseEntity<CreationTrendsDto> getCreationTrends(
+            @RequestParam String granularity,
+            ShiftSearchRequestDto filters) {
+        return ResponseEntity.ok(shiftService.getCreationTrends(granularity, filters));
     }
 
 

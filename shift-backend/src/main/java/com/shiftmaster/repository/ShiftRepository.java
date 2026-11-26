@@ -18,7 +18,6 @@ public interface ShiftRepository extends JpaRepository<Shift, Long>, JpaSpecific
     List<Shift> findByShiftCodeAndIdNotOrShiftNameAndIdNot(String shiftCode, Long codeId, String shiftName, Long nameId);
 
 
-
     @Query(value = """
             SELECT DATE_FORMAT(created_at, '%Y') AS period, COUNT(*) AS count
             FROM shift
@@ -52,13 +51,13 @@ public interface ShiftRepository extends JpaRepository<Shift, Long>, JpaSpecific
     List<CreationTrend> getWeeklyCreationTrends(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 
     @Query(value = """
-            SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS period,
-                   COUNT(*) AS count
-            FROM shift
-            WHERE (:dateFrom IS NULL OR created_at >= :dateFrom)
-              AND (:dateTo IS NULL OR created_at < DATE_ADD(:dateTo, INTERVAL 1 DAY))
-           GROUP BY DATE_FORMAT(created_at, '%Y')
-            ORDER BY DATE_FORMAT(created_at, '%Y')
+             SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS period,
+                    COUNT(*) AS count
+             FROM shift
+             WHERE (:dateFrom IS NULL OR created_at >= :dateFrom)
+               AND (:dateTo IS NULL OR created_at < DATE_ADD(:dateTo, INTERVAL 1 DAY))
+            GROUP BY DATE_FORMAT(created_at, '%Y')
+             ORDER BY DATE_FORMAT(created_at, '%Y')
             """, nativeQuery = true)
     List<CreationTrend> getDailyCreationTrends(@Param("dateFrom") LocalDate dateFrom, @Param("dateTo") LocalDate dateTo);
 

@@ -1,19 +1,23 @@
 package com.shiftmaster.repository;
 
+import com.shiftmaster.dto.CreationTrendsDto;
 import com.shiftmaster.dto.ShiftAnalyticsDto;
 import com.shiftmaster.entity.Shift;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Tuple;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Repository
@@ -240,5 +244,43 @@ public class ShiftAnalyticsRepository {
         }
 
         return result;
+    }
+
+    public List<CreationTrendsDto.TrendPoint> getCreationTrends(
+            Specification<Shift> specification,
+            String granularity
+    ) {
+        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaQuery<Tuple> query = cb.createTupleQuery();
+        Root<Shift> root = query.from(Shift.class);
+
+        var date = root.get("createdAt");
+
+        var period = switch (granularity.toLowerCase(Locale.ROOT)) {
+            case "yearly" -> cb.function("DATE_FORMAT", String.class, date, cb.literal("%Y"));
+            case "monthly" -> cb.function("DATE_FORMAT", String.class, date, cb.literal("%Y-%m"));
+            case "weekly" -> cb.concat(
+                    cb.function("DATE_FORMAT", String.class, date, cb.literal("%x")),
+                    cb.concat("-W", cb.function("DATE_FORMAT", String.class, date, cb.literal("%v")))
+            );
+            case "daily" -> cb.function("DATE_FORMAT", String.class, date, cb.literal("%Y-%m-%d"));
+            default -> throw new IllegalArgumentException("Invalid granularity: " + granularity);
+        };
+
+        Predicate filterPredicate = specification != null
+                ? specification.toPredicate(root, query, cb)
+                : cb.conjunction();
+
+        query.select(cb.tuple(period.alias("date"), cb.count(root).alias("count")));
+        query.where(filterPredicate != null ? cb.and(filterPredicate, cb.isNotNull(date)) : cb.isNotNull(date));
+        query.groupBy(period);
+        query.orderBy(cb.asc(period));
+
+        return entityManager.createQuery(query).getResultList().stream()
+                .map(row -> new CreationTrendsDto.TrendPoint(
+                        row.get("date", String.class),
+                        row.get("count", Long.class)
+                ))
+                .toList();
     }
 }
