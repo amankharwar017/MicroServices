@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isCancel } from "axios";
-import { Alert, Box, CircularProgress, Typography, Stack, ToggleButton, ToggleButtonGroup, Card, IconButton, Tooltip, Chip, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import { Alert, Box, CircularProgress, Typography, Stack, ToggleButton, ToggleButtonGroup, Card, IconButton, Tooltip, Chip } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import ColumnChart from "../../components/ColumnChart";
@@ -11,7 +11,6 @@ import DashboardStatTiles from "../../components/DashboardStatTiles";
 import ShiftDrilldownDialog from "./ShiftDrilldownDialog";
 import DashboardFilterBar from "./dashboard-filter";
 import { getDashboardCounts, getShiftAnalytics, searchShifts, getCreationTrends } from "../shift-api";
-import type { CreationTrendsResponse, ShiftTrendFilters } from "../shift-api";
 import type { ShiftResponse } from "../../types/shift";
 import type { ChartEngine, TableBreakdownRow, DrilldownPayload, ShiftAnalytics } from "../../types/chartTypes";
 import { useDispatch, useSelector } from "react-redux";
@@ -33,35 +32,6 @@ const defaultFilters = (): ShiftDashboardFilters => ({
 });
 
 
-type TrendLevel = "yearly" | "monthly" | "weekly" | "daily";
-
-function getTrendDateRange(period: string): { from: string; to: string } | null {
-    if (/^\d{4}-\d{2}-\d{2}$/.test(period)) {
-        const formatted = dayjs(period).format("YYYY-MM-DD");
-        return { from: formatted, to: formatted };
-    }
-    if (/^\d{4}-\d{2}$/.test(period)) {
-        const month = dayjs(`${period}-01`);
-        return { from: month.startOf("month").format("YYYY-MM-DD"), to: month.endOf("month").format("YYYY-MM-DD") };
-    }
-    if (/^\d{4}$/.test(period)) {
-        const year = dayjs(`${period}-01-01`);
-        return { from: year.startOf("year").format("YYYY-MM-DD"), to: year.endOf("year").format("YYYY-MM-DD") };
-    }
-
-    const weeklyMatch = /^(\d{4})-W(\d{2})$/.exec(period);
-    if (weeklyMatch) {
-        const year = Number(weeklyMatch[1]);
-        const week = Number(weeklyMatch[2]);
-        const fourthJanuary = dayjs(`${year}-01-04`);
-        const firstIsoWeekStart = fourthJanuary.subtract((fourthJanuary.day() + 6) % 7, "day");
-        const weekStart = firstIsoWeekStart.add(week - 1, "week");
-        return { from: weekStart.format("YYYY-MM-DD"), to: weekStart.add(6, "day").format("YYYY-MM-DD") };
-    }
-
-    return null;
-}
-
 export default function ShiftDashboard() {
     const [engine, setEngine] = useState<ChartEngine>("recharts");
     const [analytics, setAnalytics] = useState<ShiftAnalytics | null>(null);
@@ -73,12 +43,7 @@ export default function ShiftDashboard() {
     const dropdownOptions = useSelector(selectFreshDropdownOptions);
     const [filters, setFilters] = useState<ShiftDashboardFilters>(defaultFilters);
     const [appliedFilters, setAppliedFilters] = useState<ShiftDashboardFilters>(defaultFilters);
-    const [creationTrendsLevel, setCreationTrendsLevel] = useState<TrendLevel>("monthly");
-    const [creationTrendsData, setCreationTrendsData] = useState<CreationTrendsResponse | null>(null);
-    const [creationTrendsLoading, setCreationTrendsLoading] = useState(false);
-    const [creationTrendsError, setCreationTrendsError] = useState<string | null>(null);
-    const [weeklySelectedMonth, setWeeklySelectedMonth] = useState<string>("");
-    const trendAbortRef = useRef<AbortController | null>(null);
+    const [trendLevel, setTrendLevel] = useState<"YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY">("YEARLY");
     const [drilldown, setDrilldown] = useState<DrilldownPayload | null>(null);
     const [drilldownShifts, setDrilldownShifts] = useState<ShiftResponse[]>([]);
     const [drilldownLoading, setDrilldownLoading] = useState(false);
@@ -93,72 +58,12 @@ export default function ShiftDashboard() {
         void dispatch(fetchShiftDropdownOptions());
     }, [dispatch]);
 
-    const availableMonths = useMemo(() => {
-        const months = new Set<string>();
-        (creationTrendsData?.trends ?? []).forEach(item => {
-            if (/^\d{4}-\d{2}/.test(item.period)) {
-                months.add(item.period.slice(0, 7));
-            }
-        });
-        if (appliedFilters.createdDateFrom) {
-            months.add(appliedFilters.createdDateFrom.slice(0, 7));
-        }
-        if (appliedFilters.createdDateTo) {
-            months.add(appliedFilters.createdDateTo.slice(0, 7));
-        }
-        if (months.size === 0) {
-            months.add(dayjs().format("YYYY-MM"));
-        }
-        return Array.from(months).sort((a, b) => b.localeCompare(a));
-    }, [creationTrendsData, appliedFilters.createdDateFrom, appliedFilters.createdDateTo]);
-    const currentMonth = useMemo(
-        () => availableMonths[0] ?? dayjs().format("YYYY-MM"),
-        [availableMonths]
-    );
-
-    const buildTrendFilters = useCallback((filterObj: ShiftDashboardFilters): ShiftTrendFilters => {
-        const statusVal = filterObj.status.length === 1 ? filterObj.status[0] === "Active" : undefined;
-        const nightShiftVal = filterObj.nightShift.length === 1 ? filterObj.nightShift[0] === "Yes" : undefined;
-        return {
-            shiftType: filterObj.shiftTypes.length ? filterObj.shiftTypes : undefined,
-            status: statusVal,
-            nightShift: nightShiftVal,
-            createdDateFrom: filterObj.createdDateFrom || undefined,
-            createdDateTo: filterObj.createdDateTo || undefined
-        };
-    }, []);
-
     // ---- API 2: Creation Trends ----
-    const fetchCreationTrends = useCallback(async (
-        level: TrendLevel,
-        filterObj: ShiftDashboardFilters,
-        signal: AbortSignal,
-        month?: string
-    ) => {
-        setCreationTrendsLoading(true);
-        setCreationTrendsError(null);
-        const searchReq = buildTrendFilters(filterObj);
-        if (level === "weekly" && month) {
-            const [year, monthNum] = month.split("-").map(Number);
-            const startOfMonth = dayjs().year(year).month(monthNum - 1).startOf("month");
-            const endOfMonth = dayjs().year(year).month(monthNum - 1).endOf("month");
-            searchReq.createdDateFrom = startOfMonth.format("YYYY-MM-DD");
-            searchReq.createdDateTo = endOfMonth.format("YYYY-MM-DD");
-        }
-        try {
-            const response = await getCreationTrends(level, searchReq, signal);
-            if (signal.aborted) return;
-            setCreationTrendsData(response.data);
-        } catch (err) {
-            if (!isCancel(err) && !signal.aborted) {
-                setCreationTrendsError("Failed to load creation trends");
-            }
-        } finally {
-            if (!signal.aborted) {
-                setCreationTrendsLoading(false);
-            }
-        }
-    }, [buildTrendFilters]);
+    const fetchCreationTrends = async (level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY", dateFrom = appliedFilters.createdDateFrom, dateTo = appliedFilters.createdDateTo) => {
+        const response = await getCreationTrends(level, dateFrom, dateTo);
+        setTrendLevel(level);
+        setAnalytics(prev => prev ? { ...prev, creationTrends: response.data ?? [] } : prev);
+    };
 
     // ---- API 1: Dashboard Counts (tiles only) ----
     const fetchDashboardCounts = useCallback(async () => {
@@ -224,6 +129,7 @@ export default function ShiftDashboard() {
         try {
             await Promise.all([
                 fetchDashboardCounts(),
+                fetchCreationTrends("YEARLY", activeFilters.createdDateFrom, activeFilters.createdDateTo),
                 fetchAnalytics(activeFilters)
             ]);
         } catch (err) {
@@ -246,26 +152,18 @@ export default function ShiftDashboard() {
 
         return () => {
             abortControllerRef.current?.abort();
-            trendAbortRef.current?.abort();
         };
     }, [loadInitialDashboard]);
-
-    useEffect(() => {
-        if (trendAbortRef.current) {
-            trendAbortRef.current.abort();
-        }
-        const controller = new AbortController();
-        trendAbortRef.current = controller;
-        const month = creationTrendsLevel === "weekly" ? (weeklySelectedMonth || currentMonth) : undefined;
-        void fetchCreationTrends(creationTrendsLevel, appliedFilters, controller.signal, month);
-        return () => controller.abort();
-    }, [creationTrendsLevel, appliedFilters, weeklySelectedMonth, currentMonth, fetchCreationTrends]);
 
     const handleApplyFilters = () => {
         const nextFilters = { ...filters };
         setLoading(true);
         setAppliedFilters(nextFilters);
-        void fetchAnalytics(nextFilters).finally(() => { setLoading(false); });
+        // Only search + creation trends — counts sirf initial load pe chalti hai
+        void Promise.all([
+            fetchAnalytics(nextFilters),
+            fetchCreationTrends(trendLevel, nextFilters.createdDateFrom, nextFilters.createdDateTo)
+        ]).finally(() => { setLoading(false); });
     };
 
     const handleResetFilters = () => {
@@ -274,7 +172,10 @@ export default function ShiftDashboard() {
         setFilters(def);
         setAppliedFilters(def);
 
-        void fetchAnalytics(def).finally(() => { setLoading(false); });
+        void Promise.all([
+            fetchAnalytics(def),
+            fetchCreationTrends(trendLevel, def.createdDateFrom, def.createdDateTo)
+        ]).finally(() => { setLoading(false); });
     };
 
     const handleRefresh = () => {
@@ -286,12 +187,6 @@ export default function ShiftDashboard() {
         setDrilldownOpen(false);
         void dispatch(fetchShiftDropdownOptions());
         void loadInitialDashboard(def);
-
-        trendAbortRef.current?.abort();
-        const trendController = new AbortController();
-        trendAbortRef.current = trendController;
-        const month = creationTrendsLevel === "weekly" ? (weeklySelectedMonth || currentMonth) : undefined;
-        void fetchCreationTrends(creationTrendsLevel, def, trendController.signal, month);
     };
 
     // ----------------- Drilldown (View Table) with Server-Side Pagination -----------------
@@ -340,10 +235,17 @@ export default function ShiftDashboard() {
             const isNight = payload.value === "Night Shift";
             searchParams.nightShift = isNight;
         } else if (payload.source === "trends") {
-            const dateRange = getTrendDateRange(String(payload.value ?? ""));
-            if (dateRange) {
-                searchParams.createdDateFrom = dateRange.from;
-                searchParams.createdDateTo = dateRange.to;
+            const dateStr = String(payload.value ?? "");
+            if (dateStr.length === 4) {
+                searchParams.createdDateFrom = `${dateStr}-01-01`;
+                searchParams.createdDateTo = `${dateStr}-12-31`;
+            } else if (dateStr.length === 7) {
+                searchParams.createdDateFrom = `${dateStr}-01`;
+                const lastDay = dayjs(dateStr, "YYYY-MM").endOf("month").format("YYYY-MM-DD");
+                searchParams.createdDateTo = lastDay;
+            } else if (dateStr.length === 10) {
+                searchParams.createdDateFrom = dateStr;
+                searchParams.createdDateTo = dateStr;
             }
         }
 
@@ -359,8 +261,9 @@ export default function ShiftDashboard() {
     // ----------------- Format Table Data for Cards -----------------
     // 1. Shift Creation Trends Table Data
     const trendsTableData: TableBreakdownRow[] = useMemo(() => {
-        return creationTrendsData?.trends?.map(item => ({ category: item.period, count: item.count })) ?? [];
-    }, [creationTrendsData]);
+        if (!analytics?.creationTrends) return [];
+        return analytics.creationTrends.map(item => ({ category: item.month, count: item.count }));
+    }, [analytics]);
 
     // 2. Shifts by Type Table Data
     const typeTableData: TableBreakdownRow[] = useMemo(() => {
@@ -480,58 +383,23 @@ export default function ShiftDashboard() {
             {loading && !analytics ? (<Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 10 }}><CircularProgress size={48} sx={{ color: "#17324d" }} /> </Box>
             ) : analytics ? (
                 <Box sx={{ display: "grid", gap: 2.5 }}>
-                    {/* Chart 1: Creation Trends - API Driven */}
+                    {/* Chart 1: Shift Creation Trends (Full width with Year/Month/Day Drilldown) */}
                     <DashboardChartCard
                         title="Shift Creation Trends"
                         subtitle="Growth trajectory and timeline distribution"
-                        tableColumns={[
-                            { key: "category", label: "Period" },
-                            { key: "count", label: "Shifts Created", isCount: true }
-                        ]}
+                        tableColumns={[{ key: "category", label: "Date / Period" }, { key: "count", label: "Shifts Created", isCount: true }]}
                         tableData={trendsTableData}
-                        onCountClick={row => { void handleDrilldown({ source: "trends", title: `Shifts Created in ${row.category}`, label: String(row.category), value: String(row.category), count: Number(row.count ?? 0) }); }}
-                    >
-                        <Box sx={{ width: "100%" }}>
-                            <Box sx={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 1, mb: 1.5 }}>
-                                <Typography variant="subtitle2" sx={{ flex: 1, fontWeight: 700, color: "text.secondary" }}> Granularity </Typography>
-                                <ToggleButtonGroup size="small" exclusive value={creationTrendsLevel} onChange={(_, nextLevel: TrendLevel | null) => { if (nextLevel) setCreationTrendsLevel(nextLevel); }}>
-                                    <ToggleButton value="yearly" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>Yearly</ToggleButton>
-                                    <ToggleButton value="monthly" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>Monthly</ToggleButton>
-                                    <ToggleButton value="weekly" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>Weekly</ToggleButton>
-                                    <ToggleButton value="daily" sx={{ px: 1.5, py: 0.25, fontSize: "0.75rem" }}>Daily</ToggleButton>
-                                </ToggleButtonGroup>
-                                {creationTrendsLevel === "weekly" && (
-                                    <FormControl size="small" sx={{ minWidth: 140 }}>
-                                        <InputLabel sx={{ fontSize: "0.8rem" }}>Month</InputLabel>
-                                        <Select value={weeklySelectedMonth || currentMonth} label="Month" sx={{ fontSize: "0.8rem" }} onChange={event => setWeeklySelectedMonth(event.target.value)}>
-                                            {availableMonths.map(item => (
-                                                <MenuItem key={item} value={item} sx={{ fontSize: "0.8rem" }}>
-                                                    {dayjs(item).format("MMMM YYYY")}
-                                                </MenuItem>
-                                            ))}
-                                        </Select>
-                                    </FormControl>
-                                )}
-                            </Box>
-                            {creationTrendsLoading ? (
-                                <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 10 }}>
-                                    <CircularProgress size={48} sx={{ color: "#17324d" }} />
-                                </Box>
-                            ) : creationTrendsError ? (
-                                <Typography color="error" sx={{ textAlign: "center", py: 5 }}> {creationTrendsError} </Typography>
-                            ) : !creationTrendsData?.trends?.length ? (
-                                <Typography color="text.secondary" sx={{ textAlign: "center", py: 5 }}> No creation trend data available for the selected period. </Typography>
-                            ) : (
-                                <ColumnChart
-                                    title="Shift Creation Trends"
-                                    data={creationTrendsData.trends.map(t => ({ date: t.period, count: t.count }))}
-                                    categoryField="date"
-                                    valueFields={[{ field: "count", name: "Shifts", color: "#1976d2" }]}
-                                    engine={engine}
-                                    onBarClick={cat => { void handleDrilldown({ source: "trends", title: `Shifts Created in ${cat}`, label: cat, value: cat }); }}
-                                />
-                            )}
-                        </Box>
+                        onCountClick={row => { void handleDrilldown({ source: "trends", title: `Shifts Created on ${row.category}`, label: String(row.category), value: String(row.category), count: Number(row.count ?? 0) }); }}  >
+                        <ColumnChart
+                            title="Shift Creation Trends"
+                            data={analytics.creationTrends}
+                            categoryField="month"
+                            valueFields={[{ field: "count", name: "Shifts", color: "#1976d2" }]}
+                            drillDown
+                            engine={engine}
+                            onTrendLevelChange={fetchCreationTrends}
+                            onBarClick={cat => { void handleDrilldown({ source: "trends", title: `Shifts Created on ${cat}`, label: cat, value: cat }); }}
+                        />
                     </DashboardChartCard>
                     <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", lg: "repeat(2, minmax(0, 1fr))" }, gap: 2.5 }}>
                         {/* Chart 2: Shifts by Type — from search API data */}

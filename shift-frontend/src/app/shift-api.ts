@@ -55,40 +55,12 @@ export const getShiftDropdownOptions = async () => {
     );
 };
 
-export type CreationGranularity = "yearly" | "monthly" | "weekly" | "daily";
-
-export interface CreationTrendPoint {
-  period: string;
-  count: number;
-}
-
-export interface CreationTrendsResponse {
-  granularity: string;
-  trends: CreationTrendPoint[];
-}
-
-export interface ShiftTrendFilters {
-  shiftCode?: string;
-  shiftName?: string;
-  shiftType?: string[];
-  nightShift?: boolean;
-  status?: boolean;
-  createdDateFrom?: string;
-  createdDateTo?: string;
-}
-
-export const getCreationTrends = (
-  granularity: CreationGranularity,
-  filters: ShiftTrendFilters = {},
-  signal?: AbortSignal
-) => {
-  const params = Object.fromEntries(
-    Object.entries({ granularity, ...filters }).filter(([, value]) => value !== undefined && value !== "")
-  );
-  return axiosInstance.get<CreationTrendsResponse>("/shift/creation-trends", {
+export const getCreationTrends = async (level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY", dateFrom?: string, dateTo?: string) => {
+  const params: Record<string, string> = { level };
+  if (dateFrom) params.createdDateFrom = dateFrom;
+  if (dateTo) params.createdDateTo = dateTo;
+  return await axiosInstance.get("/shift/creation-trends", {
     params,
-    paramsSerializer: { indexes: null },
-    signal,
   });
 };
 

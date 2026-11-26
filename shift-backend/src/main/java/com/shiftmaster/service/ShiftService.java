@@ -1,7 +1,6 @@
 package com.shiftmaster.service;
 
 import com.shiftmaster.dto.ApiResponseDto;
-import com.shiftmaster.dto.CreationTrendsDto;
 import com.shiftmaster.dto.ShiftAnalyticsDto;
 import com.shiftmaster.dto.ShiftDashboardCountDto;
 import com.shiftmaster.dto.ShiftRequestDto;
@@ -38,7 +37,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.time.LocalDate;
-import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
@@ -129,27 +127,47 @@ public class ShiftService {
     }
 
 
-    public CreationTrendsDto getCreationTrends(String granularity, ShiftSearchRequestDto filters) {
-        filters = filters == null ? new ShiftSearchRequestDto() : filters;
-        LocalDate createdDateFrom = filters.getCreatedDateFrom();
-        LocalDate createdDateTo = filters.getCreatedDateTo();
-        if (createdDateFrom != null && createdDateTo != null && createdDateFrom.isAfter(createdDateTo)) {
-            throw new IllegalArgumentException("Created date from must not be after created date to");
-        }
-
-        String normalizedGranularity = granularity == null
-                ? ""
-                : granularity.trim().toLowerCase(Locale.ROOT);
-
-        if (!List.of("daily", "weekly", "monthly", "yearly").contains(normalizedGranularity)) {
-            throw new IllegalArgumentException("Unsupported creation-trends granularity");
-        }
-
-        List<CreationTrendsDto.TrendPoint> trends = shiftAnalyticsRepository.getCreationTrends(
-                shiftUtil.createShiftSearchSpecification(filters),
-                normalizedGranularity
-        );
-        return new CreationTrendsDto(normalizedGranularity, trends);
+    public List<Map<String, Object>> getCreationTrends(String level, LocalDate dateFrom, LocalDate dateTo) {
+        List<ShiftRepository.CreationTrend> results;
+        return switch (level.toUpperCase()) {
+            case "YEARLY" -> {
+                results = shiftRepository.getYearlyCreationTrends(dateFrom, dateTo);
+                yield results.stream().map(row -> {
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("month", row.getPeriod());
+                    data.put("count", row.getCount());
+                    return data;
+                }).toList();
+            }
+            case "MONTHLY" -> {
+                results = shiftRepository.getMonthlyCreationTrends(dateFrom, dateTo);
+                yield results.stream().map(row -> {
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("month", row.getPeriod());
+                    data.put("count", row.getCount());
+                    return data;
+                }).toList();
+            }
+            case "WEEKLY" -> {
+                results = shiftRepository.getWeeklyCreationTrends(dateFrom, dateTo);
+                yield results.stream().map(row -> {
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("month", row.getPeriod());
+                    data.put("count", row.getCount());
+                    return data;
+                }).toList();
+            }
+            case "DAILY" -> {
+                results = shiftRepository.getDailyCreationTrends(dateFrom, dateTo);
+                yield results.stream().map(row -> {
+                    Map<String, Object> data = new HashMap<>();
+                    data.put("month", row.getPeriod());
+                    data.put("count", row.getCount());
+                    return data;
+                }).toList();
+            }
+            default -> throw new IllegalArgumentException("Invalid trend level. Use YEARLY, MONTHLY, WEEKLY or DAILY");
+        };
     }
 
     @Transactional(readOnly = true)
