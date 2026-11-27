@@ -71,7 +71,6 @@ export const shiftResponseHeaders: (keyof ShiftResponse)[] = [
   "attachment",
   "remarks",
   "status",
-  "isDeleted",
   "createdBy",
   "createdAt",
   "updatedBy",
