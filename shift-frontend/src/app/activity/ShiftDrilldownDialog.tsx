@@ -92,7 +92,7 @@ export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, s
             shifts.forEach(shift => {
                 worksheet.addRow(headers.map(header => {
                     const value = shift[header as keyof ShiftResponse];
-                    return header === "status" ? (value ? "Active" : "Inactive") : Array.isArray(value) ? value.join(", ") : value ?? "";
+return header === "status" ? (value ? "Active" : "Inactive") : ["overtimeAllowed", "nightShift", "weeklyOff"].includes(header) ? (value ? "Yes" : "No") : Array.isArray(value) ? value.join(", ") : value ?? "";
                 }));
             });
 

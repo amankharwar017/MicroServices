@@ -278,7 +278,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
             const worksheet = workbook.addWorksheet("Shift Master");
             const headers = shiftResponseHeaders.filter((header) => header !== "id" && header !== "isDeleted" && allShifts.some((shift) => header in shift));
             worksheet.addRow(headers.map(h => h.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase())));
-            allShifts.forEach((shift) => worksheet.addRow(headers.map((header) => { const value = shift[header as keyof ShiftResponse]; return header === "status" ? (value ? "Active" : "Inactive") : Array.isArray(value) ? value.join(", ") : value ?? ""; })));
+            allShifts.forEach((shift) => worksheet.addRow(headers.map((header) => { const value = shift[header as keyof ShiftResponse]; return header === "status" ? (value ? "Active" : "Inactive") : ["overtimeAllowed", "nightShift", "weeklyOff"].includes(header) ? (value ? "Yes" : "No") : Array.isArray(value) ? value.join(", ") : value ?? ""; })));
             const headerRow = worksheet.getRow(1);
             headerRow.height = 28;
             headerRow.eachCell((cell) => {
