@@ -12,10 +12,11 @@ export type DashboardStatTilesProps = {
     inactive: number;
     night?: number;
     activeStatusFilter?: boolean;
+    selectedTile?: TileType;
     onTileClick?: (type: TileType) => void;
 };
 
-export default function DashboardStatTiles({ total, active, inactive, night, activeStatusFilter, onTileClick}: DashboardStatTilesProps) {
+export default function DashboardStatTiles({ total, active, inactive, night, activeStatusFilter, selectedTile, onTileClick}: DashboardStatTilesProps) {
     const tiles = [
         {   type: "total" as const,
             title: "Total Shifts",
@@ -65,7 +66,7 @@ export default function DashboardStatTiles({ total, active, inactive, night, act
     return (
         <Box sx={{ display: "grid", gridTemplateColumns: {  xs: "1fr", sm: "repeat(2, minmax(0, 1fr))", lg: "repeat(4, minmax(0, 1fr))" }, gap: 2, mb: 2.5 }} >
             {tiles.map(tile => {
-                const isSelected = tile.type === "active" && activeStatusFilter === true
+                const isSelected = selectedTile ? tile.type === selectedTile : (tile.type === "active" && activeStatusFilter === true);
                 return (
                     <Card
                         key={tile.title}

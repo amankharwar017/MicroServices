@@ -7,7 +7,7 @@ import ColumnChart from "../../components/ColumnChart";
 import PieChart from "../../components/PieChart";
 import GaugeChart from "../../components/GaugeChart";
 import DashboardChartCard from "../../components/DashboardChartCard";
-import DashboardStatTiles from "../../components/DashboardStatTiles";
+import DashboardStatTiles, { type TileType } from "../../components/DashboardStatTiles";
 import ShiftDrilldownDialog from "./ShiftDrilldownDialog";
 import DashboardFilterBar from "./dashboard-filter";
 import { getDashboardCounts, getShiftAnalytics, searchShifts, getCreationTrends } from "../shift-api";
@@ -71,12 +71,30 @@ export default function ShiftDashboard() {
         };
     }, []);
 
+    const getTrendFilterParams = useCallback((
+        level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY",
+        activeFilters: ShiftDashboardFilters
+    ): ShiftAnalyticsFilterParams => {
+        if (level !== "YEARLY") {
+            return buildFilterParams(activeFilters);
+        }
+        return buildFilterParams({
+            ...activeFilters,
+            createdDateFrom: activeFilters.createdDateFrom
+                ? dayjs(activeFilters.createdDateFrom).startOf("year").format("YYYY-MM-DD")
+                : "",
+            createdDateTo: activeFilters.createdDateTo
+                ? dayjs(activeFilters.createdDateTo).endOf("year").format("YYYY-MM-DD")
+                : ""
+        });
+    }, [buildFilterParams]);
+
     // ---- API 2: Creation Trends ----
     const fetchCreationTrends = async (
         level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY",
         activeFilters: ShiftDashboardFilters = appliedFilters
     ) => {
-        const response = await getCreationTrends(level, buildFilterParams(activeFilters));
+        const response = await getCreationTrends(level, getTrendFilterParams(level, activeFilters));
         setTrendLevel(level);
         setAnalytics(prev => prev ? { ...prev, creationTrends: response.data ?? [] } : prev);
     };
@@ -193,6 +211,55 @@ export default function ShiftDashboard() {
 
     const handleRemoveChip = (nextFilters: ShiftDashboardFilters) => {
         setLoading(true);
+        void Promise.all([
+            fetchAnalytics(nextFilters),
+            fetchCreationTrends(trendLevel, nextFilters)
+        ]).finally(() => { setLoading(false); });
+    };
+
+    const handleTileClick = (type: TileType) => {
+        const baseDateFilters: Pick<ShiftDashboardFilters, "createdDateFrom" | "createdDateTo"> = {
+            createdDateFrom: appliedFilters.createdDateFrom,
+            createdDateTo: appliedFilters.createdDateTo
+        };
+
+        let nextFilters: ShiftDashboardFilters;
+
+        if (type === "total") {
+            nextFilters = {
+                search: "",
+                shiftTypes: [],
+                status: [],
+                nightShift: [],
+                ...baseDateFilters
+            };
+        } else if (type === "active") {
+            nextFilters = {
+                ...appliedFilters,
+                status: ["Active"],
+                nightShift: [],
+                ...baseDateFilters
+            };
+        } else if (type === "inactive") {
+            nextFilters = {
+                ...appliedFilters,
+                status: ["Inactive"],
+                nightShift: [],
+                ...baseDateFilters
+            };
+        } else {
+            nextFilters = {
+                ...appliedFilters,
+                status: [],
+                nightShift: ["Yes"],
+                ...baseDateFilters
+            };
+        }
+
+        setLoading(true);
+        setFilters(nextFilters);
+        setAppliedFilters(nextFilters);
+
         void Promise.all([
             fetchAnalytics(nextFilters),
             fetchCreationTrends(trendLevel, nextFilters)
@@ -343,8 +410,24 @@ export default function ShiftDashboard() {
         return analytics.nightDistribution.map(item => ({ category: item.name, count: item.count, percentage: `${((item.count / totalShifts) * 100).toFixed(1)}%` }));
     }, [analytics]);
 
-    // Active status filter for tile selection highlight
-    const activeTileStatus = appliedFilters.status.length === 1 ? appliedFilters.status[0] === "Active" : undefined;
+    // Active filter for tile selection highlight
+    const selectedTile: TileType | undefined = useMemo(() => {
+        if (appliedFilters.nightShift.length === 1 && appliedFilters.nightShift[0] === "Yes") {
+            return "night";
+        }
+        if (appliedFilters.status.length === 1) {
+            if (appliedFilters.status[0] === "Active") return "active";
+            if (appliedFilters.status[0] === "Inactive") return "inactive";
+        }
+        if (
+            appliedFilters.status.length === 0 &&
+            appliedFilters.nightShift.length === 0 &&
+            appliedFilters.shiftTypes.length === 0
+        ) {
+            return "total";
+        }
+        return undefined;
+    }, [appliedFilters]);
 
     return (
         <>
@@ -404,18 +487,8 @@ export default function ShiftDashboard() {
                 active={summaryCounts?.active ?? 0}
                 inactive={summaryCounts?.inactive ?? 0}
                 night={summaryCounts?.night ?? 0}
-                activeStatusFilter={activeTileStatus}
-                onTileClick={type => {
-                    if (type === "total") {
-                        void handleDrilldown({ source: "tile", title: "All Shifts", label: "Total", value: "total", count: summaryCounts?.total ?? 0 });
-                    } else if (type === "active") {
-                        void handleDrilldown({ source: "status", title: "Active Shifts", label: "Active", value: "Active", count: summaryCounts?.active ?? 0 });
-                    } else if (type === "inactive") {
-                        void handleDrilldown({ source: "status", title: "Inactive Shifts", label: "Inactive", value: "Inactive", count: summaryCounts?.inactive ?? 0 });
-                    } else if (type === "night") {
-                        void handleDrilldown({ source: "night", title: "Night Shift Records", label: "Night Shift", value: "Night Shift", count: summaryCounts?.night ?? 0 });
-                    }
-                }}
+                selectedTile={selectedTile}
+                onTileClick={handleTileClick}
             />
             {/* Search Filters Card */}
             <DashboardFilterBar
