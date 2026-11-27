@@ -13,7 +13,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { type Dayjs } from "dayjs";
-import { searchShifts, getShiftAnalytics } from "../shift-api";
+import { searchShifts, getShiftSummary } from "../shift-api";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch } from "../../redux/store";
 import { fetchShiftDropdownOptions, selectFreshDropdownOptions, } from "../../redux/cacheSlice";
@@ -96,8 +96,8 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
     const fetchSummaryCounts = async () => {
       try {
         const response = summaryMode === "date"
-          ? await getShiftAnalytics(formData.createdDateFrom, formData.createdDateTo)
-          : await getShiftAnalytics();
+          ? await getShiftSummary(formData.createdDateFrom, formData.createdDateTo)
+          : await getShiftSummary();
 
         setTotalShifts(response.data?.total ?? 0);
         setActiveShifts(response.data?.active ?? 0);
@@ -224,8 +224,8 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
     const loadAnalytics = async () => {
       try {
         const response = mode === "date"
-          ? await getShiftAnalytics(nextData.createdDateFrom, nextData.createdDateTo)
-          : await getShiftAnalytics();
+          ? await getShiftSummary(nextData.createdDateFrom, nextData.createdDateTo)
+          : await getShiftSummary();
 
         setTotalShifts(response.data?.total ?? 0);
         setActiveShifts(response.data?.active ?? 0);

@@ -54,16 +54,31 @@ const normalizeApplicableDays = (value: unknown): string[] => {
     return days.map((day) => String(day).trim().toUpperCase()).filter(Boolean).map((day) => day.replace(/\s+/g, "")).filter((day) => allowedDays.has(day));
 };
 
-const normalizeExcelRow = (row: Record<string, unknown>): Record<string, unknown> => ({
-    ...row,
-    graceIn: normalizeGraceValue(row.graceIn ?? row["Grace In"]),
-    graceOut: normalizeGraceValue(row.graceOut ?? row["Grace Out"]),
-    applicableDays: normalizeApplicableDays(row.applicableDays ?? row["Applicable Days"]),
-    startTime: formatExcelTime(row.startTime),
-    endTime: formatExcelTime(row.endTime),
-    breakStart: formatExcelTime(row.breakStart),
-    breakEnd: formatExcelTime(row.breakEnd)
-});
+const normalizeExcelRow = (row: Record<string, unknown>): Record<string, unknown> => {
+    const bool = (value: unknown, yes: string, no: string) => typeof value === "boolean" ? value : String(value ?? "").trim().toLowerCase() === yes.toLowerCase() ? true : String(value ?? "").trim().toLowerCase() === no.toLowerCase() ? false : value;
+    return {
+        ...row,
+        shiftCode: row.shiftCode ?? row["Shift Code"],
+        shiftName: row.shiftName ?? row["Shift Name"],
+        displayName: row.displayName ?? row["Display Name"],
+        shiftType: row.shiftType ?? row["Shift Type"],
+        startTime: formatExcelTime(row.startTime ?? row["Start Time"]),
+        endTime: formatExcelTime(row.endTime ?? row["End Time"]),
+        breakStart: formatExcelTime(row.breakStart ?? row["Break Start"]),
+        breakEnd: formatExcelTime(row.breakEnd ?? row["Break End"]),
+        graceIn: normalizeGraceValue(row.graceIn ?? row["Grace In"]),
+        graceOut: normalizeGraceValue(row.graceOut ?? row["Grace Out"]),
+        overtimeAllowed: bool(row.overtimeAllowed ?? row["Overtime Allowed"], "yes", "no"),
+        nightShift: bool(row.nightShift ?? row["Night Shift"], "yes", "no"),
+        weeklyOff: bool(row.weeklyOff ?? row["Weekly Off"], "yes", "no"),
+        shiftColor: row.shiftColor ?? row["Shift Color"],
+        applicableDays: normalizeApplicableDays(row.applicableDays ?? row["Applicable Days"]),
+        description: row.description ?? row["Description"],
+        attachment: row.attachment ?? row["Attachment"],
+        remarks: row.remarks ?? row["Remarks"],
+        status: bool(row.status ?? row["Status"], "active", "inactive")
+    };
+};
 
 const shiftColumns: MRT_ColumnDef<ShiftResponse>[] = [
     { accessorKey: "shiftCode", header: "Shift Code", size: 150, enableSorting: true },

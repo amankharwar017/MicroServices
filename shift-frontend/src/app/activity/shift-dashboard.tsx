@@ -10,7 +10,7 @@ import DashboardChartCard from "../../components/DashboardChartCard";
 import DashboardStatTiles, { type TileType } from "../../components/DashboardStatTiles";
 import ShiftDrilldownDialog from "./ShiftDrilldownDialog";
 import DashboardFilterBar from "./dashboard-filter";
-import { getDashboardCounts, getShiftAnalytics, searchShifts, getCreationTrends } from "../shift-api";
+import { getDashboardCounts, getShiftSummary, searchShifts, getCreationTrends } from "../shift-api";
 import type { ShiftAnalyticsFilterParams } from "../shift-api";
 import type { ShiftResponse } from "../../types/shift";
 import type { ChartEngine, TableBreakdownRow, DrilldownPayload, ShiftAnalytics } from "../../types/chartTypes";
@@ -107,7 +107,7 @@ export default function ShiftDashboard() {
     // ---- API 3: Dashboard Analytics ----
     const fetchAnalytics = useCallback(async (activeFilters: ShiftDashboardFilters) => {
         try {
-            const response = await getShiftAnalytics(buildFilterParams(activeFilters));
+            const response = await getShiftSummary(buildFilterParams(activeFilters));
 
             const data = response.data;
 

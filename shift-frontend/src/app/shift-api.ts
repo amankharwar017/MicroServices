@@ -78,7 +78,7 @@ export const getCreationTrends = async (
 
 export const getDashboardCounts = () => axiosInstance.get("/shift/dashboard-counts");
 
-export const getShiftAnalytics = async (
+export const getShiftSummary = async (
   filtersOrDateFrom?: ShiftAnalyticsFilterParams | string,
   dateTo?: string
 ) => {
