@@ -74,20 +74,7 @@ export default function ShiftDashboard() {
     const getTrendFilterParams = useCallback((
         level: "YEARLY" | "MONTHLY" | "WEEKLY" | "DAILY",
         activeFilters: ShiftDashboardFilters
-    ): ShiftAnalyticsFilterParams => {
-        if (level !== "YEARLY") {
-            return buildFilterParams(activeFilters);
-        }
-        return buildFilterParams({
-            ...activeFilters,
-            createdDateFrom: activeFilters.createdDateFrom
-                ? dayjs(activeFilters.createdDateFrom).startOf("year").format("YYYY-MM-DD")
-                : "",
-            createdDateTo: activeFilters.createdDateTo
-                ? dayjs(activeFilters.createdDateTo).endOf("year").format("YYYY-MM-DD")
-                : ""
-        });
-    }, [buildFilterParams]);
+    ): ShiftAnalyticsFilterParams => buildFilterParams(activeFilters), [buildFilterParams]);
 
     // ---- API 2: Creation Trends ----
     const fetchCreationTrends = async (
