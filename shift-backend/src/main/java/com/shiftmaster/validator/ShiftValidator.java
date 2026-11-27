@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalTime;
 import java.util.List;
 
 @Component
@@ -46,8 +47,24 @@ public class ShiftValidator {
         if (request.getStartTime().equals(request.getEndTime())) {
             throw new IllegalArgumentException("Start time and end time cannot be same");
         }
-        if (request.getBreakStart() != null && request.getBreakEnd() != null && !request.getBreakEnd().isAfter(request.getBreakStart())) {
+        if (request.getBreakStart() == null || request.getBreakEnd() == null) return;
+        LocalTime start = request.getStartTime();
+        LocalTime end = request.getEndTime();
+        LocalTime breakStart = request.getBreakStart();
+        LocalTime breakEnd = request.getBreakEnd();
+        if (!breakEnd.isAfter(breakStart)) {
             throw new IllegalArgumentException("Break end time must be greater than break start time");
+        }
+        boolean overnightShift = end.isBefore(start);
+        if (!overnightShift) {
+            if (breakStart.isBefore(start) || breakEnd.isAfter(end)) {
+                throw new IllegalArgumentException("Break time must be within shift start and end time");
+            }
+        } else {
+            boolean breakWithinShift = !breakStart.isBefore(start) || !breakEnd.isAfter(end);
+            if (!breakWithinShift) {
+                throw new IllegalArgumentException("Break time must be within shift start and end time");
+            }
         }
     }
 }
