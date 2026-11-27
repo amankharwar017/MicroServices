@@ -79,6 +79,13 @@ export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, s
         }
     ], []);
 
+    const formatExcelDateTime = (value?: string | null) => {
+        if (!value) return "";
+        const [date, time] = String(value).split("T");
+        const [year, month, day] = date.split("-");
+        return `${day}-${month}-${year}${time ? ` ${time.split(".")[0]}` : ""}`;
+    };
+
     const handleDownloadExcel = async () => {
         try {
             const workbook = new ExcelJS.Workbook();
@@ -92,7 +99,7 @@ export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, s
             shifts.forEach(shift => {
                 worksheet.addRow(headers.map(header => {
                     const value = shift[header as keyof ShiftResponse];
-return header === "status" ? (value ? "Active" : "Inactive") : ["overtimeAllowed", "nightShift", "weeklyOff"].includes(header) ? (value ? "Yes" : "No") : Array.isArray(value) ? value.join(", ") : value ?? "";
+                    return header === "createdAt" || header === "updatedAt" ? formatExcelDateTime(value as string) : header === "status" ? (value ? "Active" : "Inactive") : ["overtimeAllowed", "nightShift", "weeklyOff"].includes(header) ? (value ? "Yes" : "No") : Array.isArray(value) ? value.join(", ") : value ?? "";
                 }));
             });
 
