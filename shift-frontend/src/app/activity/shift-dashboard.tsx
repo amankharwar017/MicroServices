@@ -218,7 +218,8 @@ export default function ShiftDashboard() {
                 shiftTypes: [],
                 status: [],
                 nightShift: [],
-                ...baseDateFilters
+                createdDateFrom: "",
+                createdDateTo: ""
             };
         } else if (type === "active") {
             nextFilters = {
