@@ -84,10 +84,10 @@ export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, s
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Shift Master");
             const mandatoryHeaders = new Set<string>(["shiftCode", "shiftName", "shiftType", "startTime", "endTime"]);
-            const headers = shiftResponseHeaders.filter(header => header !== "id" && shifts.some(shift => header in shift));
+            const headers = shiftResponseHeaders.filter(header => header !== "id" && header !== "isDeleted" && shifts.some(shift => header in shift));
 
             worksheet.addRow(headers.map(header => mandatoryHeaders.has(header) ? "MANDATORY" : "OPTIONAL"));
-           worksheet.addRow(headers.map(h => h.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase())));
+            worksheet.addRow(headers.map(h => h.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase())));
 
             shifts.forEach(shift => {
                 worksheet.addRow(headers.map(header => {

@@ -276,7 +276,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
             const allShifts = shifts;
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet("Shift Master");
-            const headers = shiftResponseHeaders.filter((header) => header !== "id" && allShifts.some((shift) => header in shift));
+            const headers = shiftResponseHeaders.filter((header) => header !== "id" && header !== "isDeleted" && allShifts.some((shift) => header in shift));
             worksheet.addRow(headers.map(h => h.replace(/([A-Z])/g, " $1").replace(/^./, c => c.toUpperCase())));
             allShifts.forEach((shift) => worksheet.addRow(headers.map((header) => { const value = shift[header as keyof ShiftResponse]; return Array.isArray(value) ? value.join(", ") : value ?? ""; })));
             const headerRow = worksheet.getRow(1);
