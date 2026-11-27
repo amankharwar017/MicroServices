@@ -20,6 +20,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDateTime;
@@ -47,14 +48,14 @@ public class ShiftEmailService {
             helper.setTo(recipientEmail);
             helper.setSubject("Shift Master Notification: " + operation);
             helper.setText("Hello,\n\n" +
-                            "A shift operation was completed in Shift Master.\n\n" +
-                            "Shift Code: " + shift.getShiftCode() + "\n" +
-                            "Shift Name: " + shift.getShiftName() + "\n" +
-                            "Operation: " + operation + "\n" +
-                            "Date and Time: " + LocalDateTime.now() + "\n\n" +
-                            "Please find the complete shift details in the attached PDF.\n\n" +
-                            "Regards,\n" +
-                            "Shift Master Team"
+                    "A shift operation was completed in Shift Master.\n\n" +
+                    "Shift Code: " + shift.getShiftCode() + "\n" +
+                    "Shift Name: " + shift.getShiftName() + "\n" +
+                    "Operation: " + operation + "\n" +
+                    "Date and Time: " + LocalDateTime.now() + "\n\n" +
+                    "Please find the complete shift details in the attached PDF.\n\n" +
+                    "Regards,\n" +
+                    "Shift Master Team"
             );
 
             String shiftCode = shift.getShiftCode() == null ? "shift" : shift.getShiftCode().replaceAll("[^a-zA-Z0-9._-]", "_");
@@ -62,8 +63,6 @@ public class ShiftEmailService {
             helper.addAttachment("Shift-" + shiftCode + "-" + safeOperation + ".pdf", new ByteArrayResource(pdf));
             mailSender.send(message);
         } catch (MessagingException | DocumentException exception) {
-            System.err.println("Shift email notification failed: " + exception.getMessage());
-        } catch (RuntimeException exception) {
             System.err.println("Shift email notification failed: " + exception.getMessage());
         }
     }
@@ -78,7 +77,6 @@ public class ShiftEmailService {
             Font subTitleFont = new Font(Font.HELVETICA, 10, Font.NORMAL, Color.DARK_GRAY);
             Font headerFont = new Font(Font.HELVETICA, 10, Font.BOLD, Color.WHITE);
             Font valueFont = new Font(Font.HELVETICA, 9, Font.NORMAL, Color.BLACK);
-
             Paragraph title = new Paragraph("SHIFT MASTER - SHIFT DETAILS", titleFont);
             title.setAlignment(Element.ALIGN_CENTER);
             title.setSpacingAfter(8);

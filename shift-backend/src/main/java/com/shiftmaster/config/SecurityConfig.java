@@ -1,5 +1,6 @@
 package com.shiftmaster.config;
 
+import com.shiftmaster.security.GatewayAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
@@ -14,7 +15,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import com.shiftmaster.security.GatewayAuthenticationFilter;
 
 @Configuration
 @EnableMethodSecurity

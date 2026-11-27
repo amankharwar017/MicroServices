@@ -20,7 +20,6 @@ public class DropdownService {
         Map<String, List<DropdownOptionDto>> days = dropdownClient.getDays();
         Map<String, List<DropdownOptionDto>> rules = dropdownClient.getRules();
         Map<String, List<DropdownOptionDto>> types = dropdownClient.getTypes();
-
         return new DropdownOptionsDto(types.get("shiftTypes"), days.get("applicableDays"), rules.get("overtimes"), rules.get("nightShifts"), days.get("weeklyOffs"), types.get("shiftStatuses"));
     }
 }

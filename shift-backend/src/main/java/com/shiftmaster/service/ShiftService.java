@@ -31,12 +31,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import tools.jackson.databind.ObjectMapper;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.time.LocalDate;
 
 @Service
 @RequiredArgsConstructor
@@ -139,6 +137,7 @@ public class ShiftService {
     public ShiftAnalyticsDto getShiftAnalytics(ShiftSearchRequestDto filters) {
         return shiftAnalyticsRepository.getShiftAnalytics(filters);
     }
+
     public List<String> validateSingleShift(Map<String, Object> row) {
         Set<String> errors = new LinkedHashSet<>();
         if (row == null) {

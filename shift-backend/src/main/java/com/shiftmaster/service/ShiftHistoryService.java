@@ -10,8 +10,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.util.List;
 
@@ -52,8 +52,10 @@ public class ShiftHistoryService {
         response.setOperation(history.getOperation());
         response.setOperationAt(history.getOperationAt());
         try {
-            if (history.getOldValues() != null) response.setOldValues(objectMapper.readValue(history.getOldValues(), ShiftResponseDto.class));
-            if (history.getNewValues() != null) response.setNewValues(objectMapper.readValue(history.getNewValues(), ShiftResponseDto.class));
+            if (history.getOldValues() != null)
+                response.setOldValues(objectMapper.readValue(history.getOldValues(), ShiftResponseDto.class));
+            if (history.getNewValues() != null)
+                response.setNewValues(objectMapper.readValue(history.getNewValues(), ShiftResponseDto.class));
         } catch (JacksonException exception) {
             throw new IllegalStateException("Failed to read shift history", exception);
         }

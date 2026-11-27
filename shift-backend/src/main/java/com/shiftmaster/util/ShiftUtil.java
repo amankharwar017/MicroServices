@@ -41,6 +41,7 @@ public class ShiftUtil {
         }
     }
 
+    //change searchfilter in two jpa specification
     public Specification<Shift> createShiftSearchSpecification(ShiftSearchRequestDto request) {
         Specification<Shift> specification;
         specification = (root, query, cb) -> {
