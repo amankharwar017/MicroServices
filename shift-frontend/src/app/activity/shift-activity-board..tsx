@@ -267,6 +267,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
     const handleSearch = (searchData: Record<string, any>) => {
         setSearchParams(searchData);
         setPaginationModel({ page: 0, pageSize: paginationModel.pageSize });
+        setSummaryCountsRefresh(previous => previous + 1);
     };
     const handleCloseHistory = () => { setHistoryShiftId(null); setHistoryShiftCode(""); };
     const handleDownloadMenuOpen = (event: MouseEvent<HTMLElement>) => setDownloadMenuAnchor(event.currentTarget);
