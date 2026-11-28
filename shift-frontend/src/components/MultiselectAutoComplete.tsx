@@ -67,15 +67,15 @@ function MultiselectAutoComplete({ label, name, value, options, onChange, multip
         renderOption={(props, option, { selected }) => {
           const allSelected =
             multiple &&
-            option.value === "All" &&
+            option.value.toLowerCase() === "all" &&
             Array.isArray(value) &&
             options
-              .filter((item) => item.value !== "All")
+              .filter((item) => item.value.toLowerCase() !== "all")
               .every((item) => value.includes(item.value));
 
           return (
             <li {...props} key={option.value}>
-              {multiple && <Checkbox checked={option.value === "All" ? allSelected : selected} className="custom-multiselect-autocomplete-checkbox" />}
+              {multiple && <Checkbox checked={option.value.toLowerCase() === "all" ? allSelected : selected} className="custom-multiselect-autocomplete-checkbox" />}
               {option.label}
             </li>
           );
