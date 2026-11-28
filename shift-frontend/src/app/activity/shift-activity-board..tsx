@@ -706,7 +706,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
                     )}
                 </Box>
                 {activePage === "dashboard" && !showForm && (
-                    <Box onMouseEnter={() => setFabHovered(true)} onMouseLeave={() => setFabHovered(false)} sx={{ position: "fixed", right: 24, bottom: 24, zIndex: 1400, width: 44, height: 180 }}>
+                    <Box onMouseEnter={() => setFabHovered(true)} onMouseLeave={() => setFabHovered(false)} sx={{ position: "fixed", right: 24, bottom: 70, zIndex: 1400, width: 44, height: 180 }}>
                         <Tooltip title="Download Excel" placement="left">
                             <IconButton aria-label="Download Excel" onClick={handleDownloadMenuOpen} className="fab-action" sx={{ position: "absolute", right: 0, bottom: 120, width: 44, height: 44, minWidth: 44, p: 0, borderRadius: "50%", color: "#fff", backgroundColor: "#16a34a", boxShadow: "0 3px 8px rgba(0,0,0,0.25)", opacity: fabHovered ? 1 : 0, visibility: fabHovered ? "visible" : "hidden", pointerEvents: fabHovered ? "auto" : "none", transform: fabHovered ? "translateY(0)" : "translateY(8px)", transition: "opacity 180ms ease, transform 180ms ease, background-color 180ms ease", "&:hover": { backgroundColor: "#15803d" } }}>
                                 <FileDownloadOutlinedIcon />
