@@ -98,7 +98,7 @@ const renderShiftValue = (shift: ShiftResponse, key: keyof ShiftResponse) => {
     const value = shift[key];
     if (key === "nightShift") return <Chip label={shift.nightShift ? "Yes" : "No"} size="small" color={shift.nightShift ? "warning" : "default"} variant={shift.nightShift ? "filled" : "outlined"} />;
     if (key === "overtimeAllowed") return <Chip label={shift.overtimeAllowed ? "Yes" : "No"} size="small" color={shift.overtimeAllowed ? "success" : "default"} variant={shift.overtimeAllowed ? "filled" : "outlined"} />;
-    if (key === "status") return <Chip label={shift.status ? "Active" : "Inactive"} size="small" color={shift.status ? "success" : "error"} variant="filled" />;
+    if (key === "status") return <Chip label={shift.status ? "Active" : "Inactive"} size="small" sx={shift.status ? { backgroundColor: "#0b8e14", color: "#fff" } : { backgroundColor: "#ea0b0b", color: "#fff" }} />;
     if (key === "createdAt" || key === "updatedAt") {
         if (!value) return "N/a";
         const [date, time] = String(value).split("T");
