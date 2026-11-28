@@ -8,6 +8,7 @@ import { shiftResponseHeaders } from "../../types/shift";
 import Table from "../../components/Table";
 import ShiftHistory from "./shift-history";
 import type { ShiftResponse } from "../../types/shift";
+import dayjs from "dayjs";
 
 export type ShiftDrilldownDialogProps = {
     open: boolean;
@@ -63,7 +64,7 @@ export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, s
             accessorKey: "status",
             header: "Status",
             size: 120,
-            Cell: ({ row }) => <Chip label={row.original.status ? "Active" : "Inactive"} size="small" color={row.original.status ? "success" : "default"} variant={row.original.status ? "filled" : "outlined"} />
+            Cell: ({ row }) => <Chip label={row.original.status ? "Active" : "Inactive"} size="small" sx={row.original.status ? { backgroundColor: "#0b8e14", color: "#fff" } : { backgroundColor: "#ea0b0b", color: "#fff" }} />
         },
         {
             accessorKey: "createdAt",
@@ -74,7 +75,7 @@ export default function ShiftDrilldownDialog({ open, onClose, title, subtitle, s
                 const value = row.original.createdAt;
                 if (!value) return "-";
                 const [date, time] = String(value).split("T");
-                return <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}><Typography sx={{ fontSize: "0.78rem" }}>{date}</Typography><Typography sx={{ fontSize: "0.78rem" }}>{time?.split(".")[0]}</Typography></Box>;
+                return <Box sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}><Typography sx={{ fontSize: "0.78rem" }}>{dayjs(date).format("DD-MM-YYYY")}</Typography><Typography sx={{ fontSize: "0.78rem" }}>{time?.split(".")[0]}</Typography></Box>;
             }
         }
     ], []);
