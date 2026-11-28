@@ -221,23 +221,6 @@ function ShiftSearchForm({ onSearch, onFiltersChange, totalRows, refreshSummaryC
     formDataRef.current = nextData;
     setFormData(nextData);
 
-    const loadAnalytics = async () => {
-      try {
-        const response = mode === "date"
-          ? await getShiftSummary(nextData.createdDateFrom, nextData.createdDateTo)
-          : await getShiftSummary();
-
-        setTotalShifts(response.data?.total ?? 0);
-        setActiveShifts(response.data?.active ?? 0);
-        setInactiveShifts(response.data?.inactive ?? 0);
-        setNightShifts(response.data?.nightShift ?? 0);
-      } catch (error) {
-        console.error("Failed to fetch shift analytics:", error);
-      }
-    };
-
-    void loadAnalytics();
-
     const nextFilters = buildFilters(nextData, mode);
     onFiltersChange?.(buildFilters(nextData, "date"), handleRemoveFilter);
     searchIfChanged(nextFilters);
