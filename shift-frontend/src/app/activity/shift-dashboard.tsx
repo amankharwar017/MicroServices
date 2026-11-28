@@ -83,7 +83,9 @@ export default function ShiftDashboard() {
     ) => {
         const response = await getCreationTrends(level, getTrendFilterParams(level, activeFilters));
         setTrendLevel(level);
-        setAnalytics(prev => prev ? { ...prev, creationTrends: response.data ?? [] } : prev);
+        setAnalytics(prev => ({...(prev ?? { total: 0, active: 0, inactive: 0, shiftsByType: [], nightDistribution: [] }),
+            creationTrends: response.data ?? []
+        }));
     };
 
     // ---- API 1: Dashboard Counts (tiles only) ----
