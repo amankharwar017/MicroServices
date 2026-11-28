@@ -17,7 +17,7 @@ import ShiftForm from "./add-form.";
 import EditForm from "./update-form";
 import Dashboard from "./shift-dashboard";
 import ShiftSearchForm from "./shift-search-filter";
-import { getShiftList, searchShifts, deleteShift, saveMultipleShifts, validateMultipleShifts, downloadShiftTemplate } from "../shift-api";
+import { searchShifts, deleteShift, saveMultipleShifts, validateMultipleShifts, downloadShiftTemplate } from "../shift-api";
 import type { ShiftResponse } from "../../types/shift";
 import { shiftResponseHeaders } from "../../types/shift";
 import type { RootState } from "../../redux/store";
@@ -723,7 +723,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
                             </IconButton>
                         </Tooltip>
                         <Tooltip title="Add Shift" placement="left">
-                            <Button variant="contained" onClick={handleAddShift} className="dashboard-add-button" sx={{ position: "absolute", right: 0, bottom: 0, minWidth: 44, width: 44, height: 44, p: 0, borderRadius: "50%", backgroundColor: "#1976d2", color: "#fff", boxShadow: "0 3px 8px rgba(0,0,0,0.25)", "&:hover": { backgroundColor: "#1565c0" } }}>
+                            <Button variant="contained" onClick={handleAddShift} className="dashboard-add-button" sx={{ position: "absolute", right: 0, bottom: 70, minWidth: 44, width: 44, height: 44, p: 0, borderRadius: "50%", backgroundColor: "#1976d2", color: "#fff", boxShadow: "0 3px 8px rgba(0,0,0,0.25)", "&:hover": { backgroundColor: "#1565c0" } }}>
                                 <AddIcon />
                             </Button>
                         </Tooltip>

@@ -19,7 +19,7 @@ public class DropdownOptionsDto implements Serializable {
 
     @Getter
     @AllArgsConstructor
-    public static class DropdownOptionDto implements Serializable{
+    public static class DropdownOptionDto implements Serializable {
 
         private Long id;
         private String name;
