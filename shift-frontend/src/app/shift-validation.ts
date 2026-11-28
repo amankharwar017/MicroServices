@@ -1,4 +1,4 @@
-import { object, string, number, boolean, array, type InferType,} from "yup";
+import { object, string, number, boolean, array, type InferType, } from "yup";
 
 export const shiftValidationSchema = object({
   shiftCode: string()
@@ -32,10 +32,29 @@ export const shiftValidationSchema = object({
       }
     ),
 
-  breakStart: string().nullable(),
+  breakStart: string()
+    .nullable()
+    .test(
+      "break-start-within-shift",
+      "Time must be within shift start and end time",
+      function (value) {
+        const { startTime, endTime } = this.parent;
+        if (!value || !startTime || !endTime) return true;
+        return value >= startTime && value <= endTime;
+      }
+    ),
 
   breakEnd: string()
     .nullable()
+    .test(
+      "break-end-within-shift",
+      "Time must be within shift start and end time",
+      function (value) {
+        const { startTime, endTime } = this.parent;
+        if (!value || !startTime || !endTime) return true;
+        return value >= startTime && value <= endTime;
+      }
+    )
     .test(
       "break-end-after-start",
       "Break end time must be greater than break start time",
@@ -49,7 +68,6 @@ export const shiftValidationSchema = object({
         return value > breakStart;
       }
     ),
-
   graceIn: number()
     .typeError("Grace in must be a numeric value")
     .min(0, "Grace in cannot be negative")
