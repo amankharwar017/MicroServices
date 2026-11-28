@@ -550,7 +550,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
             <Box component="main" className="dashboard-main" sx={{ ml: sidebarOpen ? "240px" : 0, width: sidebarOpen ? "calc(100% - 240px)" : "100%", transition: "all 0.3s ease" }}>
                 <Header username={username} role={role} anchorEl={profileAnchorEl} onProfileClick={handleProfileClick} onProfileClose={handleProfileClose} onLogout={onLogout} onMenuClick={() => setSidebarOpen((previous) => !previous)} />
                 <Box className="dashboard-content">
-                    {activePage === "dashboard" ? (
+                    {activePage === "master" ? (
                         <>
                             <Paper elevation={0} sx={{ p: 2, mb: 2, border: "1px solid #e2e8f0", borderRadius: 3, backgroundColor: "#fff" }}>
                                 <Typography variant="h5" sx={{ fontWeight: 800 }}>Shift Master</Typography>
@@ -705,7 +705,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
                         <Dashboard />
                     )}
                 </Box>
-                {activePage === "dashboard" && !showForm && (
+                {activePage === "master" && !showForm && (
                     <Box onMouseEnter={() => setFabHovered(true)} onMouseLeave={() => setFabHovered(false)} sx={{ position: "fixed", right: 24, bottom: 70, zIndex: 1400, width: 44, height: 180 }}>
                         <Tooltip title="Download Excel" placement="left">
                             <IconButton aria-label="Download Excel" onClick={handleDownloadMenuOpen} className="fab-action" sx={{ position: "absolute", right: 0, bottom: 120, width: 44, height: 44, minWidth: 44, p: 0, borderRadius: "50%", color: "#fff", backgroundColor: "#16a34a", boxShadow: "0 3px 8px rgba(0,0,0,0.25)", opacity: fabHovered ? 1 : 0, visibility: fabHovered ? "visible" : "hidden", pointerEvents: fabHovered ? "auto" : "none", transform: fabHovered ? "translateY(0)" : "translateY(8px)", transition: "opacity 180ms ease, transform 180ms ease, background-color 180ms ease", "&:hover": { backgroundColor: "#15803d" } }}>
@@ -729,7 +729,7 @@ function Activityboard({ activePage, onPageChange, username, role, onLogout }: {
                         </Tooltip>
                     </Box>
                 )}
-                {activePage === "dashboard" && (
+                {activePage === "master" && (
                     <Drawer anchor="right" open={showForm} onClose={handleBackToList} className="shift-form-drawer">
                         <div className="shift-form-drawer-content">
                             {editShiftId === null ? <ShiftForm onError={handleFormError} onSuccess={handleFormSuccess} onBack={handleBackToList} /> : <EditForm editShiftId={editShiftId} onError={handleFormError} onSuccess={handleFormSuccess} onBack={handleBackToList} />}

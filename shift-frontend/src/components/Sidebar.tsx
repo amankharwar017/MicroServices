@@ -40,7 +40,7 @@ function Sidebar({ activePage, onPageChange, open, onClose }: SidebarProps) {
                     selected={activePage === "dashboard"}
                     className="sidebar-dashboard-button"
                     onClick={() => {
-                        onPageChange("master");
+                        onPageChange("dashboard");
                         onClose();
                     }}
                 >
@@ -54,7 +54,7 @@ function Sidebar({ activePage, onPageChange, open, onClose }: SidebarProps) {
                     selected={activePage === "master"}
                     className="sidebar-dashboard-button"
                     onClick={() => {
-                        onPageChange("dashboard");
+                        onPageChange("master");
                         onClose();
                     }}
                 >
