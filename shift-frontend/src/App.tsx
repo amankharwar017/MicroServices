@@ -3,7 +3,7 @@ import Activityboard from "./app/activity/shift-activity-board.";
 import ShiftLogin from "./app/activity/shift-login";
 
 function App() {
-    const [activePage, setActivePage] = useState<"dashboard" | "master">("dashboard");
+    const [activePage, setActivePage] = useState<"dashboard" | "master">("master");
 
     const isFreshStart = !sessionStorage.getItem("appStarted");
 
@@ -44,7 +44,7 @@ function App() {
         localStorage.removeItem("token");
         localStorage.removeItem("role");
         localStorage.removeItem("username");
-
+        setActivePage("master");
         setToken(null);
         setRole(null);
         setUsername(null);
