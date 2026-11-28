@@ -23,3 +23,11 @@ eureka:
     fetch-registry: true
     service-url:
       defaultZone: https://eureka-service-0gqf.onrender.com/eureka/
+
+render:
+  services:
+    auth-service: https://auth-service-fr33.onrender.com
+    user-service: https://user-service-4h9p.onrender.com
+    shift-service: https://shift-service-3be9.onrender.com
+    master-service: https://master-service-6mja.onrender.com
+    common-service: https://common-service-tc3i.onrender.com
