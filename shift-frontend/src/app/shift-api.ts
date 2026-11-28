@@ -89,7 +89,7 @@ export const getShiftSummary = async (
   const params = Object.fromEntries(
     Object.entries(filters).filter(([, value]) => value !== undefined && value !== "")
   );
-  return axiosInstance.get("/shift/analytics", {
+  return axiosInstance.get("/shift/summary-count", {
     params,
     paramsSerializer: { indexes: null },
   });

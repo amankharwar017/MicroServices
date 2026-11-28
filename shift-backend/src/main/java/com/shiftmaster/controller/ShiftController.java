@@ -122,7 +122,7 @@ public class ShiftController {
         return ResponseEntity.ok(shiftService.getCounts());
     }
 
-    @GetMapping("/analytics")
+    @GetMapping("/summary-count")
     public ResponseEntity<ShiftAnalyticsDto> getShiftAnalytics(
             ShiftSearchRequestDto filters,
             @RequestParam(required = false) LocalDate dateFrom,

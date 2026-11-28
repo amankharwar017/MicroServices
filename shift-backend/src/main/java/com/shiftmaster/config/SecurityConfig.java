@@ -26,7 +26,7 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/shift/internal/validate", "/shift/dashboard-counts", "/shift/creation-trends", "/shift/analytics").permitAll()
+                        .requestMatchers("/shift/internal/validate", "/shift/dashboard-counts", "/shift/creation-trends", "/shift/summary-count").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(gatewayAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
